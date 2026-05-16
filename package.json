@@ -12,8 +12,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@tavily/core": "^0.7.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "groq-sdk": "^1.2.0",
+    "node-fetch": "^3.3.2",
+    "tavily": "^2.0.0"
   }
 }
