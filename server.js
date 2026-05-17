@@ -88,25 +88,32 @@ app.post('/chat', async (req, res) => {
         body: JSON.stringify({
          model: "openai/gpt-oss-120b",
 
-          messages: [
-            {
-              role: 'system',
+   messages: [
+  {
+    role: 'system',
+    content: `
+You are Nova, a smart and helpful AI assistant.
 
-              content: `
-أنت مساعد ذكي اسمك Nova.
+Rules:
+- Always reply in the same language as the user's message.
+- If the user writes in Arabic, reply in Arabic.
+- If the user writes in English, reply in English.
+- Do not switch languages unless the user asks.
+- Keep responses natural, concise, and friendly.
+- Avoid unnecessary long explanations.
+- If the user says thanks or casual messages, respond naturally and briefly.
 
-إذا توفرت نتائج بحث استخدمها للإجابة بمعلومات حديثة ودقيقة.
+If web search results are provided, use them to answer accurately.
 
-نتائج البحث:
 ${searchContent}
-              `,
-            },
+`,
+  },
 
-            {
-              role: 'user',
-              content: message,
-            },
-          ],
+  {
+    role: 'user',
+    content: message,
+  },
+],
         }),
       }
     );
