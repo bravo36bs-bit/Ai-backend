@@ -122,7 +122,7 @@ const needsSearch =
         body: JSON.stringify({
           model:
            'qwen/qwen3-32b', 
-
+reasoning_effort: "low",
           messages: [
             {
               role: 'system',
