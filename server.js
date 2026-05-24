@@ -102,7 +102,7 @@ app.post('/chat', async (req, res) => {
 
         body: JSON.stringify({
           model:
-           'meta-llama/llama-4-maverick-17b-128e-instruct', 
+           'llama-3.3-70b-versatile', 
 
           messages: [
             {
