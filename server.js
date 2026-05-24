@@ -15,6 +15,13 @@ app.get('/', (req, res) => {
   res.send('AI Backend Running 🚀');
 });
 
+const currentDate = new Date()
+  .toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
 app.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
@@ -24,22 +31,35 @@ app.post('/chat', async (req, res) => {
         ?.text || '';
 
     // هل يحتاج بحث؟
-    const needsSearch = [
-      '2024',
-      '2025',
-      '2026',
-      'اليوم',
-      'حاليا',
-      'حالياً',
-      'آخر',
-      'احدث',
-      'أحدث',
-      'news',
-      'latest',
-    ].some((word) =>
-      lastMessage.includes(word)
-    );
+    const searchKeywords = [
+  '2024',
+  '2025',
+  '2026',
+  'today',
+  'latest',
+  'news',
+  'new',
+  'current',
+  'now',
+  'recent',
+  'اليوم',
+  'حاليا',
+  'حالياً',
+  'آخر',
+  'احدث',
+  'أحدث',
+  'شنو الجديد',
+  'هسة',
+  'اخبار',
+  'ترند',
+];
 
+const needsSearch =
+  searchKeywords.some(word =>
+    latestMessage
+      .toLowerCase()
+      .includes(word)
+  );
     let searchContent = '';
 
     // البحث بالنت
@@ -57,8 +77,7 @@ app.post('/chat', async (req, res) => {
           body: JSON.stringify({
             api_key:
               process.env.TAVILY_API_KEY,
-
-            query: lastMessage,
+               query: latestMessage,
 
             max_results: 3,
           }),
@@ -109,7 +128,10 @@ app.post('/chat', async (req, res) => {
               role: 'system',
 
               content: `
-You are Nova, a smart and helpful AI assistant.
+You are Nova, a smart, modern, and human-like AI assistant.
+
+Today's date is:
+${currentDate}
 
 Rules:
 - Always reply in the same language as the user's message.
@@ -128,19 +150,21 @@ Rules:
 - Avoid robotic responses.
 - Do not write long paragraphs unless needed.
 
+- Behave similarly to modern ChatGPT-style responses.
+
 - If the user says something simple like:
   "I love Ronaldo"
   respond naturally and briefly.
 
-- Behave like ChatGPT style responses.
-
-If web search results are provided, use them only when needed.
-
 - Use correct spelling and grammar.
 - Avoid spelling mistakes.
-- Write clean and polished Arabic.
-- Use natural Iraqi Arabic when speaking casually.
+- Write polished and natural Arabic.
+- Use natural Iraqi Arabic when the conversation is casual.
 - Keep English grammar clean and professional.
+
+- Never mention being outdated.
+- If web search results are provided, prioritize them for recent or factual questions.
+- If the answer is uncertain, say so honestly instead of hallucinating.
 
 ${searchContent}
 `,
