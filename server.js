@@ -26,7 +26,7 @@ app.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
 
-    const lastMessage =
+    const latestMessage =
       messages[messages.length - 1]
         ?.text || '';
 
