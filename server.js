@@ -121,7 +121,7 @@ const needsSearch =
 
         body: JSON.stringify({
           model:
-           'meta-llama/llama-4-scout-17b-16e-instruct', 
+           'qwen/qwen3-32b', 
 
           messages: [
             {
