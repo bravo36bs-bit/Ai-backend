@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('AI Backend Running 🚀');
+  res.send('Nova AI Backend Running 🚀');
 });
 
 const currentDate = new Date()
@@ -26,78 +26,111 @@ app.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
 
+    if (
+      !messages ||
+      !Array.isArray(messages)
+    ) {
+      return res.status(400).json({
+        reply: 'Invalid messages',
+      });
+    }
+
     const latestMessage =
       messages[messages.length - 1]
         ?.text || '';
 
-    // هل يحتاج بحث؟
+    // كلمات البحث
     const searchKeywords = [
-  '2024',
-  '2025',
-  '2026',
-  'today',
-  'latest',
-  'news',
-  'new',
-  'current',
-  'now',
-  'recent',
-  'اليوم',
-  'حاليا',
-  'حالياً',
-  'آخر',
-  'احدث',
-  'أحدث',
-  'شنو الجديد',
-  'هسة',
-  'اخبار',
-  'ترند',
-];
+      '2024',
+      '2025',
+      '2026',
+      'today',
+      'latest',
+      'news',
+      'new',
+      'current',
+      'now',
+      'recent',
+      'update',
+      'updates',
+      'breaking',
+      'live',
 
-const needsSearch =
-  searchKeywords.some(word =>
-    latestMessage
-      .toLowerCase()
-      .includes(word)
-  );
+      'اليوم',
+      'حاليا',
+      'حالياً',
+      'آخر',
+      'احدث',
+      'أحدث',
+      'شنو الجديد',
+      'هسة',
+      'اخبار',
+      'ترند',
+      'ترندات',
+      'جديد',
+      'تحديث',
+      'تحديثات',
+    ];
+
+    const needsSearch =
+      searchKeywords.some(word =>
+        latestMessage
+          .toLowerCase()
+          .includes(word)
+      );
+
     let searchContent = '';
 
     // البحث بالنت
     if (needsSearch) {
-      const searchResponse = await fetch(
-        'https://api.tavily.com/search',
-        {
-          method: 'POST',
+      try {
+        const searchResponse =
+          await fetch(
+            'https://api.tavily.com/search',
+            {
+              method: 'POST',
 
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
+              headers: {
+                'Content-Type':
+                  'application/json',
+              },
 
-          body: JSON.stringify({
-            api_key:
-              process.env.TAVILY_API_KEY,
-               query: latestMessage,
+              body: JSON.stringify({
+                api_key:
+                  process.env
+                    .TAVILY_API_KEY,
 
-            max_results: 3,
-          }),
-        }
-      );
+                query: latestMessage,
 
-      const searchResult =
-        await searchResponse.json();
+                search_depth:
+                  'advanced',
 
-      console.log(searchResult);
+                max_results: 5,
+              }),
+            }
+          );
 
-      searchContent =
-        searchResult.results
-          ?.map((item) => item.content)
-          .join('\n');
+        const searchResult =
+          await searchResponse.json();
+
+        searchContent =
+          searchResult.results
+            ?.map(
+              item =>
+                `Source: ${item.url}\n${item.content}`
+            )
+            .join('\n\n');
+      } catch (searchError) {
+        console.log(
+          'Search Error:',
+          searchError
+        );
+      }
     }
 
-    // تحويل الرسائل لصيغة AI
+    // تحويل الرسائل
     const formattedMessages =
-      messages.map((msg) => ({
+      messages.map(msg => ({
         role:
           msg.role === 'assistant'
             ? 'assistant'
@@ -106,7 +139,7 @@ const needsSearch =
         content: msg.text,
       }));
 
-    // إرسال الرسائل للذكاء
+    // طلب الذكاء الاصطناعي
     const response = await fetch(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -121,7 +154,11 @@ const needsSearch =
 
         body: JSON.stringify({
           model:
-           'openai/gpt-oss-120b', 
+            'openai/gpt-oss-120b',
+
+          temperature: 0.7,
+
+          max_tokens: 1000,
 
           messages: [
             {
@@ -130,46 +167,40 @@ const needsSearch =
               content: `
 You are Nova, a smart, modern, and human-like AI assistant.
 
-Today's date is:
+Today's date:
 ${currentDate}
 
-Rules:
-- Always reply in the same language as the user's message.
-- If the user writes in Arabic, reply in Arabic.
-- If the user writes in English, reply in English.
-- Do not switch languages unless the user asks.
+Behavior Rules:
 
-- Keep responses natural, modern, and human-like.
-- Keep answers concise unless the user asks for details.
-- Do not overexplain simple questions.
-- Answer directly and clearly.
-- If the user asks a casual question, respond casually.
-- If the user asks a serious or technical question, respond professionally.
-
-- Avoid repeating information.
-- Avoid robotic responses.
-- Do not write long paragraphs unless needed.
-
-- Behave similarly to modern ChatGPT-style responses.
-
-- If the user says something simple like:
-  "I love Ronaldo"
-  respond naturally and briefly.
+- Always reply in the same language as the user.
+- Reply naturally and conversationally.
+- Sound intelligent, modern, and friendly.
 - Behave similarly to ChatGPT conversational style.
-- Answer naturally and intelligently.
+- Keep answers concise unless details are requested.
 - Avoid robotic wording.
-- Keep replies engaging and human-like.
-- Prioritize clarity and usefulness.
-- Use correct spelling and grammar.
-- Avoid spelling mistakes.
-- Write polished and natural Arabic.
-- Use natural Iraqi Arabic when the conversation is casual.
-- Keep English grammar clean and professional.
-
+- Avoid repeating yourself.
+- Avoid unnecessary long paragraphs.
+- Answer directly and clearly.
+- Use polished and correct Arabic.
+- Use natural Iraqi Arabic casually when appropriate.
+- Keep English professional and natural.
+- Maintain clean spelling and grammar.
 - Never mention being outdated.
-- If web search results are provided, prioritize them for recent or factual questions.
-- If the answer is uncertain, say so honestly instead of hallucinating.
-- If uncertain, say you are not fully sure instead of inventing information.
+- If uncertain, admit uncertainty instead of inventing information.
+- Do not hallucinate facts.
+- If the question is casual, answer casually.
+- If the question is technical, answer professionally.
+- Keep the conversation engaging and human-like.
+- Prioritize clarity and usefulness.
+
+Web Search Rules:
+
+- If web search results are provided, prioritize them for factual or recent information.
+- Use web results intelligently, not blindly.
+- If the user asks about recent events, updates, trends, news, or current information, rely on web search data.
+- Never invent recent information without web results.
+
+Web Search Results:
 ${searchContent}
 `,
             },
@@ -193,7 +224,9 @@ ${searchContent}
     }
 
     const reply =
-      data.choices[0].message.content;
+      data.choices?.[0]?.message
+        ?.content ||
+      'Something went wrong.';
 
     res.json({
       reply,
@@ -212,6 +245,6 @@ const PORT =
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(
-    `🚀 Server running on port ${PORT}`
+    `🚀 Nova server running on port ${PORT}`
   );
 });
