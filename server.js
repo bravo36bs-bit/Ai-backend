@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
 
 app.post('/chat', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { messages } = req.body;
 
     // هل يحتاج بحث؟
     const needsSearch = [
@@ -93,7 +93,7 @@ app.post('/chat', async (req, res) => {
     role: 'system',
     content: `
 You are Nova, a smart and helpful AI assistant.
-
+ 
 Rules:
 - Always reply in the same language as the user's message.
 - If the user writes in Arabic, reply in Arabic.
@@ -108,7 +108,7 @@ If web search results are provided, use them to answer accurately.
 ${searchContent}
 `,
   },
-
+ ...messages,
   {
     role: 'user',
     content: message,
@@ -132,7 +132,7 @@ ${searchContent}
 
     const reply =
       data.choices[0].message.content;
-
+Speech.speak(reply);
     res.json({
       reply,
     });
@@ -144,6 +144,7 @@ ${searchContent}
     });
   }
 });
+const [isListening, setIsListening] = useState(false);
 
 const PORT =
   process.env.PORT || 5000;
