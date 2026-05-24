@@ -19,6 +19,10 @@ app.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
 
+    const lastMessage =
+      messages[messages.length - 1]
+        ?.text || '';
+
     // هل يحتاج بحث؟
     const needsSearch = [
       '2024',
@@ -33,7 +37,7 @@ app.post('/chat', async (req, res) => {
       'news',
       'latest',
     ].some((word) =>
-      message.includes(word)
+      lastMessage.includes(word)
     );
 
     let searchContent = '';
@@ -54,7 +58,7 @@ app.post('/chat', async (req, res) => {
             api_key:
               process.env.TAVILY_API_KEY,
 
-            query: message,
+            query: lastMessage,
 
             max_results: 3,
           }),
@@ -72,7 +76,18 @@ app.post('/chat', async (req, res) => {
           .join('\n');
     }
 
-    // إرسال الرسالة للـ AI
+    // تحويل الرسائل لصيغة AI
+    const formattedMessages =
+      messages.map((msg) => ({
+        role:
+          msg.role === 'assistant'
+            ? 'assistant'
+            : 'user',
+
+        content: msg.text,
+      }));
+
+    // إرسال الرسائل للذكاء
     const response = await fetch(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -86,14 +101,16 @@ app.post('/chat', async (req, res) => {
         },
 
         body: JSON.stringify({
-         model: "openai/gpt-oss-120b",
+          model:
+            'openai/gpt-oss-120b',
 
-   messages: [
-  {
-    role: 'system',
-    content: `
+          messages: [
+            {
+              role: 'system',
+
+              content: `
 You are Nova, a smart and helpful AI assistant.
- 
+
 Rules:
 - Always reply in the same language as the user's message.
 - If the user writes in Arabic, reply in Arabic.
@@ -107,13 +124,10 @@ If web search results are provided, use them to answer accurately.
 
 ${searchContent}
 `,
-  },
- ...messages,
-  {
-    role: 'user',
-    content: message,
-  },
-],
+            },
+
+            ...formattedMessages,
+          ],
         }),
       }
     );
@@ -132,7 +146,7 @@ ${searchContent}
 
     const reply =
       data.choices[0].message.content;
-Speech.speak(reply);
+
     res.json({
       reply,
     });
@@ -144,7 +158,6 @@ Speech.speak(reply);
     });
   }
 });
-const [isListening, setIsListening] = useState(false);
 
 const PORT =
   process.env.PORT || 5000;
