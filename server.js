@@ -121,8 +121,8 @@ const needsSearch =
 
         body: JSON.stringify({
           model:
-           'qwen/qwen3-32b', 
-reasoning_effort: "low",
+           'openai/gpt-oss-120b', 
+
           messages: [
             {
               role: 'system',
@@ -155,7 +155,11 @@ Rules:
 - If the user says something simple like:
   "I love Ronaldo"
   respond naturally and briefly.
-
+- Behave similarly to ChatGPT conversational style.
+- Answer naturally and intelligently.
+- Avoid robotic wording.
+- Keep replies engaging and human-like.
+- Prioritize clarity and usefulness.
 - Use correct spelling and grammar.
 - Avoid spelling mistakes.
 - Write polished and natural Arabic.
@@ -165,7 +169,7 @@ Rules:
 - Never mention being outdated.
 - If web search results are provided, prioritize them for recent or factual questions.
 - If the answer is uncertain, say so honestly instead of hallucinating.
-
+- If uncertain, say you are not fully sure instead of inventing information.
 ${searchContent}
 `,
             },
