@@ -102,7 +102,7 @@ app.post('/chat', async (req, res) => {
 
         body: JSON.stringify({
           model:
-            'openai/gpt-oss-120b',
+           'meta-llama/llama-4-maverick-17b-128e-instruct', 
 
           messages: [
             {
