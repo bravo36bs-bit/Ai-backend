@@ -41,6 +41,27 @@ app.post('/chat', async (req, res) => {
 
     // كلمات البحث
     const searchKeywords = [
+      'song',
+  'music',
+  'movie',
+  'film',
+  'actor',
+  'artist',
+  'album',
+  'series',
+  'netflix',
+
+  'اغنية',
+  'موسيقى',
+  'فلم',
+  'فيلم',
+  'مسلسل',
+  'ممثل',
+  'مطرب',
+  'مغني',
+  'اغاني',
+  'أفلام',
+
       '2024',
       '2025',
       '2026',
@@ -129,15 +150,20 @@ app.post('/chat', async (req, res) => {
     }
 
     // تحويل الرسائل
-    const formattedMessages =
-      messages.map(msg => ({
-        role:
-          msg.role === 'assistant'
-            ? 'assistant'
-            : 'user',
+   const formattedMessages = [];
 
-        content: msg.text,
-      }));
+messages.forEach(msg => {
+
+  formattedMessages.push({
+    role:
+      msg.role === 'assistant'
+        ? 'assistant'
+        : 'user',
+
+    content: msg.text,
+  });
+
+});
 
     // طلب الذكاء الاصطناعي
     const response = await fetch(
@@ -188,6 +214,13 @@ Behavior Rules:
 - Never mention being outdated.
 - If uncertain, admit uncertainty instead of inventing information.
 - Do not hallucinate facts.
+- Never guess song names.
+- Never guess movie names.
+- Never invent artists.
+- If uncertain, say you are not sure.
+- Accuracy is more important than sounding confident.
+- Never create fake recommendations.
+- If the user asks for a specific song/movie/person, answer only if confident.
 - If the question is casual, answer casually.
 - If the question is technical, answer professionally.
 - Keep the conversation engaging and human-like.
@@ -228,7 +261,68 @@ ${searchContent}
         ?.content ||
       'Something went wrong.';
 
+      const memoryResponse = await fetch(
+  'https://api.groq.com/openai/v1/chat/completions',
+  {
+    method: 'POST',
 
+    headers: {
+      Authorization:
+        `Bearer ${process.env.GROQ_API_KEY}`,
+
+      'Content-Type':
+        'application/json',
+    },
+
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+
+      temperature: 0.2,
+
+      max_tokens: 120,
+
+      messages: [
+        {
+          role: 'system',
+
+          content: `
+Update the user's long-term memory.
+
+Rules:
+- Keep memory short.
+- Save only important facts.
+- Save preferences.
+- Save emotional patterns.
+- Ignore casual talk.
+- Return ONLY the memory text.
+`,
+        },
+
+        {
+          role: 'user',
+
+          content: `
+Current memory:
+${messages.memory || ''}
+
+User message:
+${latestMessage}
+
+Assistant reply:
+${reply}
+`,
+        },
+      ],
+    }),
+  }
+);
+
+const memoryData =
+  await memoryResponse.json();
+
+const updatedMemory =
+  memoryData.choices?.[0]
+    ?.message?.content || '';
      // ======================
 // MEMORY AI UPDATE
 // ======================
