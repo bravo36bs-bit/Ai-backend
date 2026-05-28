@@ -317,17 +317,20 @@ ${reply}
   }
 );
 
+
+     // ======================
+// MEMORY AI UPDATE
+// ======================
+
+let updatedMemory = '';
+
 const memoryData =
   await memoryResponse.json();
 
 updatedMemory =
   memoryData.choices?.[0]
     ?.message?.content || '';
-     // ======================
-// MEMORY AI UPDATE
-// ======================
 
-let updatedMemory = '';
 
 try {
 
