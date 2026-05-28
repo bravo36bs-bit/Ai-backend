@@ -320,7 +320,7 @@ ${reply}
 const memoryData =
   await memoryResponse.json();
 
-const updatedMemory =
+updatedMemory =
   memoryData.choices?.[0]
     ?.message?.content || '';
      // ======================
