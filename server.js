@@ -228,9 +228,117 @@ ${searchContent}
         ?.content ||
       'Something went wrong.';
 
-    res.json({
-      reply,
-    });
+
+     // ======================
+// MEMORY AI UPDATE
+// ======================
+
+let updatedMemory = '';
+
+try {
+
+  // استخراج الميموري الحالية
+
+  const memoryMatch =
+    latestMessage.match(
+      /Memory:\s*([\s\S]*?)\nRecent conversation:/i
+    );
+
+  const currentMemory =
+    memoryMatch?.[1] || '';
+
+  // استخراج اخر رسالة مستخدم
+
+  const userMatch =
+    latestMessage.match(
+      /New message:\s*([\s\S]*)/i
+    );
+
+  const userMessage =
+    userMatch?.[1] || '';
+
+  const memoryPrompt = `
+Current memory:
+${currentMemory}
+
+User message:
+${userMessage}
+
+Nova reply:
+${reply}
+
+Update the memory.
+
+Rules:
+
+- Keep ONLY important long-term information.
+- Keep personality traits.
+- Keep emotional behavior.
+- Keep relationships.
+- Keep preferences.
+- Remove temporary details.
+- Remove repetitive information.
+- Keep memory short and clean.
+- Maximum 15 lines.
+- Return ONLY the updated memory text.
+`;
+
+  const memoryResponse =
+    await fetch(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        method: 'POST',
+
+        headers: {
+          Authorization:
+            `Bearer ${process.env.GROQ_API_KEY}`,
+
+          'Content-Type':
+            'application/json',
+        },
+
+        body: JSON.stringify({
+          model:
+            'openai/gpt-oss-120b',
+
+          temperature: 0.3,
+
+          max_tokens: 300,
+
+          messages: [
+            {
+              role: 'user',
+              content:
+                memoryPrompt,
+            },
+          ],
+        }),
+      }
+    );
+
+  const memoryData =
+    await memoryResponse.json();
+
+  updatedMemory =
+    memoryData.choices?.[0]
+      ?.message?.content || '';
+
+} catch (memoryError) {
+
+  console.log(
+    'Memory Error:',
+    memoryError
+  );
+
+        
+        }
+
+
+   res.json({
+  reply,
+  memory:
+    updatedMemory,
+});
   } catch (error) {
     console.log(error);
 
