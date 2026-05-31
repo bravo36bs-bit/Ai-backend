@@ -30,7 +30,7 @@ app.post('/chat', async (req, res) => {
     const latestMessage = messages[messages.length - 1]?.text || '';
 
     // ========================================================
-    // 🔍 1. نظام البحث الذكي (AI Query Generator & Decision)
+    // 🔍 1. نظام البحث الذكي (AI Query Generator)
     // ========================================================
     let searchContent = '';
     
@@ -42,26 +42,16 @@ app.post('/chat', async (req, res) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-8b-instant', // نموذج فائق السرعة لاتخاذ القرار
-          temperature: 0.0, // صفر لضمان دقة القرار وعدم التخريف
+          model: 'llama-3.1-8b-instant',
+          temperature: 0.0,
           max_tokens: 50,
           messages: [
             {
               role: 'system',
               content: `
-You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates, info about specific people/events that change over time).
-
-Rules:
-1. If it NEEDS search, generate a highly optimized, clean search query in English (since English gets better global search results).
-2. If it DOES NOT need search (e.g., greetings, general knowledge, math, programming, philosophy, or personal chats), reply ONLY with the word: NO_SEARCH
-
-Examples:
-- User: "شنو اخر اخبار العراق اليوم؟" -> Output: "Iraq latest news today"
-- User: "منو فاز باوسكار 2026؟" -> Output: "Oscars 2026 winners"
-- User: "هلو عيني شلونك" -> Output: "NO_SEARCH"
-- User: "اكتبلي كود جافاسكريبت" -> Output: "NO_SEARCH"
-
-Respond ONLY with the search query or "NO_SEARCH". Do not include any other text.
+You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates).
+If it NEEDS search, generate a highly optimized, clean search query in English.
+If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
 `
             },
             { role: 'user', content: latestMessage }
@@ -72,26 +62,22 @@ Respond ONLY with the search query or "NO_SEARCH". Do not include any other text
       const searchDecisionData = await searchDecisionResponse.json();
       const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
 
-      console.log(`🤖 AI Search Decision: ${aiSearchQuery}`);
-
-      // إذا قرر الذكاء الاصطناعي أن السؤال يحتاج بحث فعلاً
       if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
-        console.log(`📡 Triggering Tavily Search for: "${aiSearchQuery}"`);
-        
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             api_key: process.env.TAVILY_API_KEY,
-            query: aiSearchQuery, // نرسل الاستعلام الذكي المصاغ بالإنجليزية وليس رسالة المستخدم العشوائية
+            query: aiSearchQuery,
             search_depth: 'advanced',
-            max_results: 4,
+            max_results: 3,
           }),
         });
 
         const searchResult = await searchResponse.json();
+        
         searchContent = searchResult.results
-          ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content}`)
+          ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
           .join('\n\n') || '';
       }
     } catch (searchRouterError) {
@@ -99,13 +85,16 @@ Respond ONLY with the search query or "NO_SEARCH". Do not include any other text
     }
 
     // ========================================================
-    // 💬 2. طلب الإجابة الأساسية من الموديل الكبير Nova
+    // 💬 2. تحسين مصفوفة الرسائل (Sliding Window)
     // ========================================================
-    const formattedMessages = messages.map(msg => ({
+    const recentMessages = messages.slice(-6);
+
+    const formattedMessages = recentMessages.map(msg => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
       content: msg.text,
     }));
 
+    // طلب الإجابة الأساسية من الموديل الكبير Nova
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -137,6 +126,10 @@ Behavior Rules:
 - Never mention being outdated.
 - Do not hallucinate facts. Never guess song names, movie names, or invent artists.
 - Accuracy is more important than sounding confident.
+
+⚠️ Formatting & Identity Rules (CRITICAL):
+- Never use markdown bolding formatting like stars (e.g., do NOT use **text** or *text* or asterisks). Keep the response as completely clean and plain text.
+- If the user asks about your identity, who created you, or who developed you, explain clearly and proudly that you are Nova, powered by a base GPT model, but you were fully developed, customized, and tailored by your amazing developers (the current development team).
 
 Web Search Rules:
 - If web search results are provided below, prioritize them for factual, recent, or trend-related information.
@@ -171,16 +164,7 @@ ${searchContent}
       const userMatch = latestMessage.match(/New message:\s*([\s\S]*)/i);
       const userMessage = userMatch?.[1] || latestMessage;
 
-      const memoryPrompt = `
-Current memory:
-${currentMemory}
-User message:
-${userMessage}
-Nova reply:
-${reply}
-
-Update the memory. Keep ONLY important long-term preferences, emotional traits, or key relationships. Max 15 lines. Return ONLY the text.
-`;
+      const memoryPrompt = `Current memory:\n${currentMemory}\nUser message:\n${userMessage}\nNova reply:\n${reply}\nUpdate the memory. Max 15 lines. Return ONLY the text.`;
 
       const memoryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -203,7 +187,6 @@ Update the memory. Keep ONLY important long-term preferences, emotional traits, 
       console.log('Memory Process Error:', memoryError);
     }
 
-    // إرسال النتيجة النهائية للفرونت إند (بدون أي تغيير في الهيكلية)
     res.json({
       reply,
       memory: updatedMemory,
