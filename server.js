@@ -29,41 +29,44 @@ app.post('/chat', async (req, res) => {
 
     const latestMessage = messages[messages.length - 1]?.text || '';
 
-    // ========================================================
-    // 🔍 1. نظام كشف شاشة الـ Mood والبحث الحي لها (2026)
-    // ========================================================
-    let searchContent = '';
-    const isMoodRequest = latestMessage.includes('My mood is');
+   
+  // ========================================================
+// 🔍 1. نظام كشف شاشة الـ Mood والبحث الحي لها (2026)
+// ========================================================
+let searchContent = '';
+const isMoodRequest = latestMessage.includes('المزاج الحالي للمستخدم:'); // حدثنا الكلمة المفتاحية لتطابق الفصحى
 
-    if (isMoodRequest) {
-      try {
-        // استخراج اسم المزاج ديناميكياً لضبط البحث
-        const moodTitle = latestMessage.match(/My mood is (.*?)\./)?.[1] || 'Normal';
-        console.log(`🎯 Mood Screen Detected. Fetching real-time 2026 recommendations for: ${moodTitle}`);
+if (isMoodRequest) {
+  try {
+    // استخراج اسم المزاج بدقة
+    const moodTitle = latestMessage.match(/المزاج الحالي للمستخدم: (.*?)\./)?.[1] || 'Normal';
+    console.log(`🎯 Mood Screen Detected. Fetching real-time 2026 recommendations for: ${moodTitle}`);
 
-        // صياغة أمر بحث دقيق جداً لجلب ترندات حقيقية
-        const moodSearchQuery = `latest top trending aesthetic songs, movies, and lifestyle activities for ${moodTitle} mood in 2026`;
+    // 🔥 سر الطبخة هنا: صياغة أمر بحث فريش ومستهدف للمنصات المشهورة والترندات الحالية
+    const moodSearchQuery = `trending popular popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
 
-        const searchResponse = await fetch('https://api.tavily.com/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            api_key: process.env.TAVILY_API_KEY,
-            query: moodSearchQuery,
-            search_depth: 'advanced',
-            max_results: 5, // رفعنا النتائج لتغذية الموديل بشكل ممتاز
-          }),
-        });
+    const searchResponse = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: process.env.TAVILY_API_KEY,
+        query: moodSearchQuery,
+        search_depth: 'advanced',
+        max_results: 5, 
+      }),
+    });
 
-        const searchResult = await searchResponse.json();
-        searchContent = searchResult.results
-          ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
-          .join('\n\n') || '';
+    const searchResult = await searchResponse.json();
+    searchContent = searchResult.results
+      ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
+      .join('\n\n') || '';
 
-      } catch (moodSearchError) {
-        console.log('Error fetching real-time data for mood screen:', moodSearchError);
-      }
-    } else {
+  } catch (moodSearchError) {
+    console.log('Error fetching real-time data for mood screen:', moodSearchError);
+  }
+}
+  
+    else {
       // ========================================================
       // 🤖 2. نظام البحث الذكي للأسئلة العامة (AI Router)
       // ========================================================
