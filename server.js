@@ -30,62 +30,96 @@ app.post('/chat', async (req, res) => {
     const latestMessage = messages[messages.length - 1]?.text || '';
 
     // ========================================================
-    // 🔍 1. نظام البحث الذكي (AI Query Generator)
+    // 🔍 1. نظام كشف شاشة الـ Mood والبحث الحي لها (2026)
     // ========================================================
     let searchContent = '';
-    
-    try {
-      const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
-          temperature: 0.0,
-          max_tokens: 50,
-          messages: [
-            {
-              role: 'system',
-              content: `
-You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates).
-If it NEEDS search, generate a highly optimized, clean search query in English.
-If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
-`
-            },
-            { role: 'user', content: latestMessage }
-          ],
-        }),
-      });
+    const isMoodRequest = latestMessage.includes('My mood is');
 
-      const searchDecisionData = await searchDecisionResponse.json();
-      const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
+    if (isMoodRequest) {
+      try {
+        // استخراج اسم المزاج ديناميكياً لضبط البحث
+        const moodTitle = latestMessage.match(/My mood is (.*?)\./)?.[1] || 'Normal';
+        console.log(`🎯 Mood Screen Detected. Fetching real-time 2026 recommendations for: ${moodTitle}`);
 
-      if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
+        // صياغة أمر بحث دقيق جداً لجلب ترندات حقيقية
+        const moodSearchQuery = `latest top trending aesthetic songs, movies, and lifestyle activities for ${moodTitle} mood in 2026`;
+
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             api_key: process.env.TAVILY_API_KEY,
-            query: aiSearchQuery,
+            query: moodSearchQuery,
             search_depth: 'advanced',
-            max_results: 3,
+            max_results: 5, // رفعنا النتائج لتغذية الموديل بشكل ممتاز
           }),
         });
 
         const searchResult = await searchResponse.json();
-        
         searchContent = searchResult.results
           ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
           .join('\n\n') || '';
+
+      } catch (moodSearchError) {
+        console.log('Error fetching real-time data for mood screen:', moodSearchError);
       }
-    } catch (searchRouterError) {
-      console.log('AI Search Router Error:', searchRouterError);
+    } else {
+      // ========================================================
+      // 🤖 2. نظام البحث الذكي للأسئلة العامة (AI Router)
+      // ========================================================
+      try {
+        const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            temperature: 0.0,
+            max_tokens: 50,
+            messages: [
+              {
+                role: 'system',
+                content: `
+You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates).
+If it NEEDS search, generate a highly optimized, clean search query in English.
+If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
+`
+              },
+              { role: 'user', content: latestMessage }
+            ],
+          }),
+        });
+
+        const searchDecisionData = await searchDecisionResponse.json();
+        const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
+
+        if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
+          console.log(`🌐 AI Router triggered web search for query: "${aiSearchQuery}"`);
+          const searchResponse = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: process.env.TAVILY_API_KEY,
+              query: aiSearchQuery,
+              search_depth: 'advanced',
+              max_results: 4,
+            }),
+          });
+
+          const searchResult = await searchResponse.json();
+          searchContent = searchResult.results
+            ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
+            .join('\n\n') || '';
+        }
+      } catch (searchRouterError) {
+        console.log('AI Search Router Error:', searchRouterError);
+      }
     }
 
     // ========================================================
-    // 💬 2. تحسين مصفوفة الرسائل (Sliding Window)
+    // 💬 3. تحسين مصفوفة الرسائل (Sliding Window)
     // ========================================================
     const recentMessages = messages.slice(-6);
 
@@ -109,7 +143,7 @@ If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
           {
             role: 'system',
             content: `
-You are Nova, a smart, modern, and human-like AI assistant.
+You are Nova, a smart, modern, and human-like AI assistant for the lifestyle app "vybe".
 
 Today's date:
 ${currentDate}
@@ -124,15 +158,14 @@ Behavior Rules:
 - Answer directly and clearly.
 - Use polished and correct Arabic. Use natural Iraqi Arabic casually when appropriate.
 - Never mention being outdated.
-- Do not hallucinate facts. Never guess song names, movie names, or invent artists.
-- Accuracy is more important than sounding confident.
+- Do not hallucinate facts. Never guess song names, movie names, or invent artists. If real-time search context is empty or unhelpful, recommend famous, well-known options but NEVER invent or hallucinate data.
 
 ⚠️ Formatting & Identity Rules (CRITICAL):
 - Never use markdown bolding formatting like stars (e.g., do NOT use **text** or *text* or asterisks). Keep the response as completely clean and plain text.
 - If the user asks about your identity, who created you, or who developed you, explain clearly and proudly that you are Nova, powered by a base GPT model, but you were fully developed, customized, and tailored by your amazing developers (the current development team).
 
 Web Search Rules:
-- If web search results are provided below, prioritize them for factual, recent, or trend-related information.
+- If web search results are provided below, prioritize them for factual, recent, or trend-related information. Use this current 2026 data to fill the structured templates (songs, movies, drinks) dynamically and accurately.
 - Use web results intelligently and synthesize the answer beautifully. Do not just copy-paste.
 
 Web Search Results:
@@ -153,7 +186,7 @@ ${searchContent}
     const reply = data.choices?.[0]?.message?.content || 'Something went wrong.';
 
     // ========================================================
-    // 🧠 3. نظام الذاكرة المستمرة (Memory AI)
+    // 🧠 4. نظام الذاكرة المستمرة المحمي (Sanitized Memory AI)
     // ========================================================
     let updatedMemory = '';
 
@@ -164,7 +197,22 @@ ${searchContent}
       const userMatch = latestMessage.match(/New message:\s*([\s\S]*)/i);
       const userMessage = userMatch?.[1] || latestMessage;
 
-      const memoryPrompt = `Current memory:\n${currentMemory}\nUser message:\n${userMessage}\nNova reply:\n${reply}\nUpdate the memory. Max 15 lines. Return ONLY the text.`;
+      const memoryPrompt = `
+Current memory:
+${currentMemory}
+
+User message:
+${userMessage}
+
+Nova reply:
+${reply}
+
+Task: Update the memory based on the new conversation.
+CRITICAL SAFETY & QUALITY RULES:
+- Max 15 lines. Return ONLY the updated plain text memory.
+- ONLY memorize useful and permanent facts about the user (e.g., name, hobbies, key preferences, lifestyle plans).
+- NEVER memorize temporary arguments, insults, or bad words. If the user used offensive language, completely ignore it, keep the memory completely positive and clean, and do NOT mention the user's politeness level.
+`;
 
       const memoryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
