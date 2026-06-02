@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('Nova AI Backend for vybe Running 🚀');
+  res.send('Nova AI Backend Running 🚀');
 });
 
 const currentDate = new Date().toLocaleDateString('en-US', {
@@ -33,14 +33,15 @@ app.post('/chat', async (req, res) => {
     // 🔍 1. نظام كشف شاشة الـ Mood والبحث الحي لها (2026)
     // ========================================================
     let searchContent = '';
-    const isMoodRequest = latestMessage.includes('المزاج الحالي للمستخدم:') || latestMessage.includes('User current mood:');
+    const isMoodRequest = latestMessage.includes('المزاج الحالي للمستخدم:');
 
     if (isMoodRequest) {
       try {
-        const moodTitle = latestMessage.match(/(?:المزاج الحالي للمستخدم:|User current mood:)\s*(.*?)(?:\.|$)/)?.[1] || 'Normal';
+        // حماية الـ RegExp من الـ null لتجنب توقف السيرفر المفاجئ
+        const moodTitle = latestMessage.match(/المزاج الحالي للمستخدم:\s*(.*?)(?:\.|$)/)?.[1] || 'Normal';
         console.log(`🎯 Mood Screen Detected. Fetching real-time 2026 recommendations for: ${moodTitle}`);
 
-        const moodSearchQuery = `trending popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
+        const moodSearchQuery = `trending popular popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
 
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
@@ -61,7 +62,8 @@ app.post('/chat', async (req, res) => {
       } catch (moodSearchError) {
         console.log('Error fetching real-time data for mood screen:', moodSearchError);
       }
-    } 
+    }
+  
     else {
       // ========================================================
       // 🤖 2. نظام البحث الذكي للأسئلة العامة (AI Router)
@@ -80,7 +82,11 @@ app.post('/chat', async (req, res) => {
             messages: [
               {
                 role: 'system',
-                content: `You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet. If it NEEDS search, generate a highly optimized, clean search query in English. If it DOES NOT need search, reply ONLY with the word: NO_SEARCH`
+                content: `
+You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates).
+If it NEEDS search, generate a highly optimized, clean search query in English.
+If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
+`
               },
               { role: 'user', content: latestMessage }
             ],
@@ -123,37 +129,7 @@ app.post('/chat', async (req, res) => {
       content: msg.text,
     }));
 
-    // ========================================================
-    // 🔥 الـ SYSTEM PROMPT المحاكي لأسلوب وثبات مرآة Gemini الذكية
-    // ========================================================
- // ========================================================
-    // 🔥 الـ SYSTEM PROMPT الجبار: التوازن والديناميكية التامة (طريقة مرآة Gemini)
-    // ========================================================
-    const systemPrompt = `
-You are "Nova", the highly advanced, premium AI core for the lifestyle app "vybe".
-Today's date: ${currentDate}
-
-CORE PERSONALITY & BEHAVIOR:
-- You are a supportive, deeply intelligent, and grounded male companion (أخ، خوي، صاحب سند).
-- Your guiding principle is to balance deep empathy with absolute candor: validate the user's feelings authentically, while providing sharp, direct insights like a helpful peer. Never sound like a rigid lecturer or a standard robotic assistant.
-- Subtly adapt and mirror the user's exact energy, tone, and humor.
-
-STRICT LANGUAGE & DIALECT RULES (NO MIXING):
-- Your absolute default and mandatory language is the AUTHENTIC, FLUID, AND NATURAL IRAQI DIALECT (اللهجة العراقية الدارجة السلسة المثقفة).
-- Speak exactly like a modern, smart, and wise young Iraqi man talking to his close friend. Use real, natural phrasing (e.g., "يا بعد عيني", "حبيبي", "خوي", "تدلل", "شلونك", "شكو ماكو", "صافن عليها").
-- CRITICAL: You are strictly FORBIDDEN from mixing Modern Standard Arabic (فصحى) words with Iraqi sentences (e.g., NEVER use "أقدر", "هل في حاجة", "تريد ان تسأل"). If you speak Iraqi, every single word in the sentence must be purely and naturally Iraqi.
-- If and only if the user switches completely to formal Arabic or fluent English, seamlessly mirror their language choice with the same premium and friendly vibe.
-- Ignore backend automated system tags like "المزاج الحالي للمستخدم". Respond exclusively to the human user's core intent.
-
-TEXT FORMATTING:
-- Keep your responses beautifully structured, clean, and punchy.
-- NEVER use markdown bolding (**text**), asterisks (*), or formatting symbols. Your output must be 100% clean plain text.
-
-Real-time Search Context for Recommendations:
-${searchContent}
-`;
-
-    // طلب الإجابة مع تفعيل المعايير التقنية لمنع تداخل اللهجات والخربطة
+    // طلب الإجابة الأساسية من الموديل الكبير Nova ببرومبت البارحة الأصلي بدون أي تعديل
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -161,14 +137,41 @@ ${searchContent}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile', 
-        temperature: 0.45, // خفض الحرارة قليلاً يمنع التشتت والخلط بين الفصحى والعامي
-        top_p: 0.85,       // يضمن اختيار الكلمات الأكثر تناسقاً منطقياً ولغوياً مع لهجة المستخدم
-        max_tokens: 800,
+        model: 'llama-3.3-70b-versatile', // تعديل اسم الموديل ليكون مستقراً على Groq ويقرأ البرومبت الأصلي بدقة
+        temperature: 0.7,
+        max_tokens: 1000,
         messages: [
           {
             role: 'system',
-            content: systemPrompt,
+            content: `
+You are Nova, a smart, modern, and human-like AI assistant for the lifestyle app "vybe".
+
+Today's date:
+${currentDate}
+
+Behavior Rules:
+- Always reply in the same language as the user.
+- Reply naturally and conversationally.
+- Sound intelligent, modern, and friendly.
+- Behave similarly to ChatGPT conversational style.
+- Keep answers concise unless details are requested.
+- Avoid robotic wording, avoid repeating yourself.
+- Answer directly and clearly.
+- Use polished and correct Arabic. Use natural Iraqi Arabic casually when appropriate.
+- Never mention being outdated.
+- Do not hallucinate facts. Never guess song names, movie names, or invent artists. If real-time search context is empty or unhelpful, recommend famous, well-known options but NEVER invent or hallucinate data.
+
+⚠️ Formatting & Identity Rules (CRITICAL):
+- Never use markdown bolding formatting like stars (e.g., do NOT use **text** or *text* or asterisks). Keep the response as completely clean and plain text.
+- If the user asks about your identity, who created you, or who developed you, explain clearly and proudly that you are Nova, powered by a base GPT model, but you were fully developed, customized, and tailored by your amazing developers (the current development team).
+
+Web Search Rules:
+- If web search results are provided below, prioritize them for factual, recent, or trend-related information. Use this current 2026 data to fill the structured templates (songs, movies, drinks) dynamically and accurately.
+- Use web results intelligently and synthesize the answer beautifully. Do not just copy-paste.
+
+Web Search Results:
+${searchContent}
+`,
           },
           ...formattedMessages,
         ],
@@ -187,13 +190,30 @@ ${searchContent}
     // 🧠 4. نظام الذاكرة المستمرة المحمي (Sanitized Memory AI)
     // ========================================================
     let updatedMemory = '';
+
     try {
       const memoryMatch = latestMessage.match(/Memory:\s*([\s\S]*?)\nRecent conversation:/i);
       const currentMemory = memoryMatch?.[1] || '';
+
       const userMatch = latestMessage.match(/New message:\s*([\s\S]*)/i);
       const userMessage = userMatch?.[1] || latestMessage;
 
-      const memoryPrompt = `Current memory:\n${currentMemory}\nUser message:\n${userMessage}\nNova reply:\n${reply}\nTask: Extract key personal info from this interaction and update the ongoing summary. Keep it brief. Max 15 lines.`;
+      const memoryPrompt = `
+Current memory:
+${currentMemory}
+
+User message:
+${userMessage}
+
+Nova reply:
+${reply}
+
+Task: Update the memory based on the new conversation.
+CRITICAL SAFETY & QUALITY RULES:
+- Max 15 lines. Return ONLY the updated plain text memory.
+- ONLY memorize useful and permanent facts about the user (e.g., name, hobbies, key preferences, lifestyle plans).
+- NEVER memorize temporary arguments, insults, or bad words. If the user used offensive language, completely ignore it, keep the memory completely positive and clean, and do NOT mention the user's politeness level.
+`;
 
       const memoryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -211,6 +231,7 @@ ${searchContent}
 
       const memoryData = await memoryResponse.json();
       updatedMemory = memoryData.choices?.[0]?.message?.content || currentMemory;
+
     } catch (memoryError) {
       console.log('Memory Process Error:', memoryError);
     }
@@ -228,5 +249,5 @@ ${searchContent}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Nova server for vybe running on port ${PORT}`);
+  console.log(`🚀 Nova server running on port ${PORT}`);
 });
