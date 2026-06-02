@@ -76,7 +76,7 @@ app.post('/chat', async (req, res) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
+            model: 'openai/gpt-oss-120b',
             temperature: 0.0,
             max_tokens: 50,
             messages: [
@@ -137,7 +137,7 @@ If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile', // تعديل اسم الموديل ليكون مستقراً على Groq ويقرأ البرومبت الأصلي بدقة
+        model: 'openai/gpt-oss-120b', // تعديل اسم الموديل ليكون مستقراً على Groq ويقرأ البرومبت الأصلي بدقة
         temperature: 0.7,
         max_tokens: 1000,
         messages: [
