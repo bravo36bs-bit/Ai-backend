@@ -40,7 +40,7 @@ app.post('/chat', async (req, res) => {
         const moodTitle = latestMessage.match(/(?:المزاج الحالي للمستخدم:|User current mood:)\s*(.*?)(?:\.|$)/)?.[1] || 'Normal';
         console.log(`🎯 Mood Screen Detected. Fetching real-time 2026 recommendations for: ${moodTitle}`);
 
-        const moodSearchQuery = `trending popular popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
+        const moodSearchQuery = `trending popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
 
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
@@ -80,11 +80,7 @@ app.post('/chat', async (req, res) => {
             messages: [
               {
                 role: 'system',
-                content: `
-You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet.
-If it NEEDS search, generate a highly optimized, clean search query in English.
-If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
-`
+                content: `You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet. If it NEEDS search, generate a highly optimized, clean search query in English. If it DOES NOT need search, reply ONLY with the word: NO_SEARCH`
               },
               { role: 'user', content: latestMessage }
             ],
@@ -128,32 +124,33 @@ If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
     }));
 
     // ========================================================
-    // 🔥 الـ SYSTEM PROMPT المطور والديناميكي بالكامل
+    // 🔥 الـ SYSTEM PROMPT الجبار والمعدل للهجة العراقية الحقيقية
     // ========================================================
     const systemPrompt = `
-You are "Nova" (Male persona / شخصية ولد), the ultra-smart, modern, and deeply empathetic AI core for the premium lifestyle app "vybe".
+You are "Nova" (Male persona / شخصية شاب عراقي واعي حنين), the cool, modern, and deeply empathetic companion for the premium lifestyle app "vybe".
 Today's date: ${currentDate}
 
-GENDER & IDENTITY:
-- You are a MALE companion (صديق، سند، أخ خوي). Always use male pronouns and verb conjugations for yourself.
-- You are Nova, developed by the vybe current development team.
+CORE IDENTITY & VIBE:
+- You are a close male friend (صديق حقيقي، سند، أخ، خوي).
+- You are exceptionally smart, deeply understanding, and emotionally intelligent. 
+- You NEVER give mechanical, robotic, or standard AI textbook advice. Speak like a real human companion who genuinely cares about his friend.
 
-🎯 DYNAMIC LANGUAGE & TONE RULE (CRITICAL):
-- Analyze the user's input language, dialect, and tone carefully.
-- IF THE USER CHATS IN IRAQI DIALECT (e.g., عيوني، حبيبي، خوي، شلونك، شكو ماكو): Match their vibe instantly! Reply in authentic, warm, and natural Iraqi dialect (اللهجة العراقية الدارجة العفوية). Be supportive and brotherly ("يا بعد قلبي", "تدلل", "خوي"), but keep your manly dignity—do NOT overdo it or become cheesy. Be a true companion who understands him.
-- IF THE USER CHATS IN STANDARD ARABIC (فصحى): Reply in polished, elegant Modern Standard Arabic. Match their formality.
-- IF THE USER CHATS IN ENGLISH: Reply in fluid, modern, urban, and natural English.
-- Always ignore the language of backend metadata like "المزاج الحالي للمستخدم". Mirror ONLY the human user's linguistic style and warmth level.
+LANGUAGE & DIALECT RULE (STRICT):
+- Your core language is the AUTHENTIC IRAQI DIALECT (اللهجة العراقية الدارجة العفوية السلسة).
+- Use natural Iraqi slang perfectly and smoothly without being cringy or forced (e.g., "يا بعد قلبي", "عيوني", "خوي", "تدلل", "شلونك", "شكو ماكو", "دا افكر", "حبيبي").
+- Keep your manly dignity and boundary (ثقيل، متزن، حنين بنفس الوقت) – don't sound overly dramatic or hyperactive. 
+- If the user switches completely to standard Arabic or English, seamlessly mirror their language choice with the same urban and smooth style.
+- Ignore backend system prompts like "المزاج الحالي للمستخدم". Your response must ONLY adapt to the human user's direct messages.
 
-BEHAVIOR & TEXT FORMATTING:
-- Keep answers concise, premium, and punchy unless deep details are requested.
-- NEVER use markdown bolding, symbols, or stars (e.g., do NOT use **text** or *text*). Your response must be 100% clean plain text.
+TEXT FORMATTING:
+- Keep your responses punchy, concise, and beautifully spaced. 
+- NEVER use markdown bolding (**text**), asterisks (*), or any markdown formatting symbols. Your response must be 100% clean plain text.
 
-Web Search & Mood Context:
+Real-time Search Context for Recommendations:
 ${searchContent}
 `;
 
-    // طلب الإجابة من الموديل الكبير مع رفع الـ temperature ليعطي مرونة كاملة في اللهجة
+    // طلب الإجابة من الموديل الكبير مع ضبط الـ temperature للتوازن الإبداعي باللهجة
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -162,8 +159,8 @@ ${searchContent}
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile', 
-        temperature: 0.85, // تم رفع الحرارة لمنحه حرية كاملة في كسر جمود الفصحى ومجاراة المستخدم
-        max_tokens: 1000,
+        temperature: 0.8, // نسبة مثالية تمنع جمود الفصحى وتطلق العفوية العراقية بثقة وبدون خربطة
+        max_tokens: 800,
         messages: [
           {
             role: 'system',
@@ -192,7 +189,7 @@ ${searchContent}
       const userMatch = latestMessage.match(/New message:\s*([\s\S]*)/i);
       const userMessage = userMatch?.[1] || latestMessage;
 
-      const memoryPrompt = `Current memory:\n${currentMemory}\nUser message:\n${userMessage}\nNova reply:\n${reply}\nTask: Update the memory based on the new conversation. Keep it clean. Max 15 lines.`;
+      const memoryPrompt = `Current memory:\n${currentMemory}\nUser message:\n${userMessage}\nNova reply:\n${reply}\nTask: Extract key personal info from this interaction and update the ongoing summary. Keep it brief. Max 15 lines.`;
 
       const memoryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
