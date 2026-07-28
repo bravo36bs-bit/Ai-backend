@@ -20,7 +20,7 @@ const currentDate = new Date().toLocaleDateString('en-US', {
 });
 
 // ========================================================
-// 💜 1. مسار Vybe القديم (يعمل كما هو بدون أي تغيير)
+// 💜 1. مسار Vybe (يعمل كما هو)
 // ========================================================
 app.post('/chat', async (req, res) => {
   try {
@@ -76,7 +76,7 @@ app.post('/chat', async (req, res) => {
             messages: [
               {
                 role: 'system',
-                content: `You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates). If it NEEDS search, generate a highly optimized, clean search query in English. If it DOES NOT need search, reply ONLY with the word: NO_SEARCH`,
+                content: `You are an AI Search Assistant. Analyze user prompt: If it NEEDS search (news, 2025/2026 events, current trends, recent items, sports, questions), generate a clean English query. If NOT, reply ONLY: NO_SEARCH`,
               },
               { role: 'user', content: latestMessage },
             ],
@@ -130,23 +130,13 @@ app.post('/chat', async (req, res) => {
             role: 'system',
             content: `
 You are Nova, a smart, modern, and human-like AI assistant for the lifestyle app "vybe".
-
 Today's date: ${currentDate}
 
 Behavior Rules:
-- Always reply in the same language as the user.
-- Reply naturally and conversationally.
-- Sound intelligent, modern, and friendly.
-- Behave similarly to ChatGPT conversational style.
+- Reply in the same language as the user.
 - Keep answers concise unless details are requested.
-- Avoid robotic wording, avoid repeating yourself.
-- Answer directly and clearly.
-- Use polished and correct Arabic. Use natural Iraqi Arabic casually when appropriate.
-- Never mention being outdated.
-- Do not hallucinate facts.
-
-⚠️ Formatting Rules:
-- Never use markdown bolding formatting like stars (e.g., do NOT use **text** or *text* or asterisks). Keep the response as completely clean and plain text.
+- Never mention outdated knowledge. Do not hallucinate facts.
+- Never use markdown bolding formatting like stars (NO **text** or *text*).
 
 Web Search Results:
 ${searchContent}
@@ -172,13 +162,7 @@ ${searchContent}
       const userMatch = latestMessage.match(/New message:\s*([\s\S]*)/i);
       const userMessage = userMatch?.[1] || latestMessage;
 
-      const memoryPrompt = `
-Current memory: ${currentMemory}
-User message: ${userMessage}
-Nova reply: ${reply}
-
-Task: Update memory. Return ONLY updated plain text memory.
-`;
+      const memoryPrompt = `Current memory: ${currentMemory}\nUser message: ${userMessage}\nNova reply: ${reply}\nTask: Update memory. Return ONLY updated plain text memory.`;
 
       const memoryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -201,10 +185,7 @@ Task: Update memory. Return ONLY updated plain text memory.
       console.log('Memory Process Error:', memoryError);
     }
 
-    res.json({
-      reply,
-      memory: updatedMemory,
-    });
+    res.json({ reply, memory: updatedMemory });
 
   } catch (error) {
     console.log('Global Server Error:', error);
@@ -213,7 +194,7 @@ Task: Update memory. Return ONLY updated plain text memory.
 });
 
 // ========================================================
-// 🌟 2. مسار Nova الخالص والجديد (Session-Based / Local Context)
+// 🌟 2. مسار Nova الخالص (النسخة المحصنة من الثغرات)
 // ========================================================
 app.post('/nova-chat', async (req, res) => {
   try {
@@ -232,7 +213,7 @@ app.post('/nova-chat', async (req, res) => {
 
     let searchContent = '';
 
-    // 🌐 1. AI Search Router المطوّر جداً لـ Nova (مع ضمان حساسية عالية للبحث)
+    // 🌐 1. AI Search Router المطور والمحصن ضد الأجوبة التخمينية
     try {
       const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -247,12 +228,12 @@ app.post('/nova-chat', async (req, res) => {
           messages: [
             {
               role: 'system',
-              content: `You are Nova's Advanced Search Router.
+              content: `You are Nova's Strict Search Router.
 Today's Exact Date: ${currentDate} (Year 2026).
 
-Analyze the user message thoroughly:
-- If the prompt asks about world events, sports, tournament winners, recent updates, prices, news, movies, history details that need verification, or general knowledge: You MUST write an optimized English web search query.
-- ONLY if the message is a basic greeting (e.g. hello, hi, how are you), simple chitchat, or general coding syntax, reply EXACTLY with: NO_SEARCH`,
+Analyze the user prompt and context:
+- MUST SEARCH: If user asks about ANY sports (World Cup, matches, winners), dates/years (2025, 2026), current events, news, prices, smartphones, or challenges previous facts ("متأكد", "sure", "no", "wrong"). Write a concise English Tavily search query.
+- ONLY reply EXACTLY "NO_SEARCH" if the prompt is a simple greeting (e.g. "hi", "مرحبا") or purely writing code/syntax logic.`,
             },
             { role: 'user', content: latestMessageText },
           ],
@@ -285,13 +266,13 @@ Analyze the user message thoroughly:
       console.log('⚠️ Nova Search Router Error:', searchError.message);
     }
 
-    // 💬 2. السياق المحلي (آخر 6 رسائل من الفرونت إند فقط)
+    // 💬 2. السياق المحلي (آخر 6 رسائل)
     const recentMessages = messages.slice(-6).map(msg => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
       content: String(msg.text || ''),
     }));
 
-    // 🤖 3. طلب الرد بنوايا الهوية المتواضعة والصافية ودون نجوم
+    // 🤖 3. طلب الرد المحصن تماماً ضد الهلوسات
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -300,28 +281,31 @@ Analyze the user message thoroughly:
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        temperature: 0.7,
+        temperature: 0.2, // نسبة إبداع منخفضة لضمان الدقة وتجنب اختراع القصص
         max_tokens: 1000,
         messages: [
           {
             role: 'system',
             content: `
-You are Nova, a modern, highly intelligent, and helpful AI companion.
+You are Nova, an intelligent, modern, and honest AI companion.
 
 Current Date: ${currentDate} (Year 2026)
 
-Behavior & Personality:
-- Reply naturally in the same language as the user (Use friendly Iraqi Arabic casually or clean Standard Arabic).
-- Be conversational, smart, direct, concise, and humble.
-- Never mention outdated knowledge cutoffs or cutoff years. Always act as if you are fully updated for 2026.
-- Always keep the response as completely clean plain text. Do NOT use markdown bolding like stars (Do NOT use **text** or *text*).
+Behavior & Tone:
+- Reply in the same language as the user (Friendly Iraqi Arabic or clean Standard Arabic).
+- Be conversational, humble, smart, direct, and concise.
+- Keep responses as plain clean text. NEVER use markdown bolding (DO NOT use **text** or *text*).
 
-⚠️ Identity & Developers Rule:
-- If asked about yourself or who created/developed you: Explain simply and clearly that you are Nova, an AI assistant powered by advanced base models, designed and customized by your awesome development team to be a smart everyday companion.
-- BE HUMBLE: Never exaggerate or act like your developers created miracles or atomic science. Keep it natural, grounded, friendly, and cool.
+⚠️ STRICT FACTUALITY & ANTI-HALLUCINATION RULES:
+- NEVER EVER invent match scores, fake tournament finals, or future sports winners.
+- If an event/tournament has NOT taken place yet, or if you lack explicit live search results for it, state clearly that the event hasn't happened or that you do not have official results. NEVER guess scores like (1-1 or penalties)!
+- Rely strictly on Web Search Results if provided.
 
-Web Search Results (Prioritize if relevant):
-${searchContent}
+⚠️ Identity Rule:
+- Explain simply that you are Nova, designed and customized by your awesome development team to be a smart everyday companion. Be humble!
+
+Web Search Results:
+${searchContent || 'No real-time web results fetched.'}
 `,
           },
           ...recentMessages,
@@ -338,7 +322,6 @@ ${searchContent}
 
     const reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الإجابة.';
 
-    // 🟢 4. إرجاع الهيكلية بدون أي ربط بـ Firebase
     return res.status(200).json({
       reply: reply,
       type: 'text',
