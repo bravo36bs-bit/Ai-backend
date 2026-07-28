@@ -40,7 +40,7 @@ app.post('/chat', async (req, res) => {
         const moodTitle = latestMessage.match(/المزاج الحالي للمستخدم:\s*(.*?)(?:\.|$)/)?.[1] || 'Normal';
         console.log(`🎯 Mood Screen Detected. Fetching real-time recommendations for: ${moodTitle}`);
 
-        const moodSearchQuery = `trending popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
+        const moodSearchQuery = `trending popular songs on spotify anghami, top hit movies, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
 
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
@@ -76,7 +76,7 @@ app.post('/chat', async (req, res) => {
             messages: [
               {
                 role: 'system',
-                content: `You are an AI Search Assistant. Analyze user prompt: If it NEEDS search (news, 2025/2026 events, current trends, recent items, sports, questions), generate a clean English query. If NOT, reply ONLY: NO_SEARCH`,
+                content: `You are an AI Search Assistant. Analyze user prompt: If it NEEDS search (news, current events, recent items, sports, tech questions), generate a clean English query. If NOT, reply ONLY: NO_SEARCH`,
               },
               { role: 'user', content: latestMessage },
             ],
@@ -153,7 +153,8 @@ ${searchContent}
       return res.status(500).json({ reply: data.error.message });
     }
 
-    const reply = data.choices?.[0]?.message?.content || 'Something went wrong.';
+    let reply = data.choices?.[0]?.message?.content || 'Something went wrong.';
+    reply = reply.replace(/\*\*/g, '').replace(/\*/g, '');
 
     let updatedMemory = '';
     try {
@@ -194,7 +195,7 @@ ${searchContent}
 });
 
 // ========================================================
-// 🌟 2. مسار Nova الخالص (النظام المكتمل والذكي للبحث والرد)
+// 🌟 2. مسار Nova الخالص (النسخة المحصنة من الهلوسة والنجوم)
 // ========================================================
 app.post('/nova-chat', async (req, res) => {
   try {
@@ -213,7 +214,7 @@ app.post('/nova-chat', async (req, res) => {
 
     let searchContent = '';
 
-    // 🌐 1. AI Search Router الشامل والمبني للاستجابة المباشرة
+    // 🌐 1. AI Search Router الدقيق والمعتمد على Tavily
     try {
       const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -228,12 +229,11 @@ app.post('/nova-chat', async (req, res) => {
           messages: [
             {
               role: 'system',
-              content: `You are Nova's Active Search Router. Today's Date: ${currentDate} (Year 2026).
+              content: `You are Nova's Active Search Router.
 
-Instructions:
-- ALWAYS generate a highly accurate, concise English search query for Tavily for ANY user question asking about real-world facts, news, sports, winners, tournaments, devices, prices, movies, general knowledge, or weather.
-- Search by default!
-- ONLY reply with "NO_SEARCH" if the user input is strictly a basic conversational greeting (e.g. "hi", "hello", "مرحبا", "شلونك") or asking for local code formatting.`,
+Task:
+- Generate a concise English search query for Tavily if the user prompt asks about real-world facts, device specs, phone prices, news, sports, or releases.
+- ONLY reply "NO_SEARCH" if it is strictly a simple greeting like "hi", "hello", "مرحبا", "شلونك".`,
             },
             { role: 'user', content: latestMessageText },
           ],
@@ -251,7 +251,7 @@ Instructions:
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             api_key: process.env.TAVILY_API_KEY,
-            query: `${aiSearchQuery} 2026`,
+            query: aiSearchQuery,
             search_depth: 'advanced',
             max_results: 5,
           }),
@@ -259,7 +259,7 @@ Instructions:
 
         const searchResult = await searchResponse.json();
         searchContent = searchResult.results
-          ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
+          ?.map(item => `Title: ${item.title}\nContent: ${item.content.substring(0, 600)}`)
           .join('\n\n') || '';
       }
     } catch (searchError) {
@@ -272,7 +272,7 @@ Instructions:
       content: String(msg.text || ''),
     }));
 
-    // 🤖 3. توليد الإجابة الذكية
+    // 🤖 3. طلب الرد المحصن تماماً ضد الهلوسات
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -281,30 +281,29 @@ Instructions:
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        temperature: 0.3,
+        temperature: 0.1, // درجة حرارة منخفضة جداً لمنع افتراض الهواتف المستقبلية أو الأسعار الخيالية
         max_tokens: 1000,
         messages: [
           {
             role: 'system',
             content: `
-You are Nova, an intelligent, friendly, and honest AI companion.
+You are Nova, an intelligent, modern, and honest AI companion.
 
-Current Date: ${currentDate} (Year 2026)
+Behavior & Tone:
+- Reply in friendly Iraqi Arabic or clean Standard Arabic.
+- Be conversational, humble, smart, direct, and concise.
+- Keep responses as plain clean text. DO NOT use markdown bolding (DO NOT use **text** or *text*).
 
-Behavior & Personality:
-- Reply naturally in the same language as the user (Friendly Iraqi Arabic or clean Standard Arabic).
-- Be conversational, smart, direct, concise, and humble.
-- Keep responses as plain clean text. NEVER use markdown bolding (DO NOT use **text** or *text*).
-
-⚠️ STRICT FACTUALITY & REAL-TIME DATA:
-- Use the Web Search Results below to provide accurate, up-to-date answers for 2026.
-- NEVER invent or hallucinate fake scores, fake matches, or unverified facts. If context is missing, be clear and honest.
+⚠️ STRICT GROUNDING & ANTI-HALLUCINATION:
+- Base your answers strictly on real-world facts and the Web Search Results provided below.
+- NEVER invent imaginary devices (e.g. A57), fake processors, or incorrect phone prices (e.g. $1500 for Samsung A35).
+- If information is not found in the search results, state honestly that details are unavailable.
 
 ⚠️ Identity Rule:
-- Explain simply that you are Nova, designed and customized by your awesome development team to be a smart everyday companion. Always remain humble!
+- Explain simply that you are Nova, designed and customized by your awesome development team to be a smart everyday companion. Be humble!
 
 Web Search Results:
-${searchContent || 'No live web context required for this prompt.'}
+${searchContent || 'No real-time search context required.'}
 `,
           },
           ...recentMessages,
@@ -319,7 +318,10 @@ ${searchContent || 'No live web context required for this prompt.'}
       return res.status(500).json({ reply: 'عذراً، صار خلل بسيط بإنشاء الرد.', type: 'text', imageUrl: null });
     }
 
-    const reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الإجابة.';
+    let reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الإجابة.';
+
+    // 🧹 تنظيف إضافي من السيرفر: مسح أي نجوم ** قبل إرسال النص للواجهة
+    reply = reply.replace(/\*\*/g, '').replace(/\*/g, '');
 
     return res.status(200).json({
       reply: reply,
