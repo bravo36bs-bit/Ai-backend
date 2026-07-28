@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('Nova AI Backend Running 🚀');
+  res.send('Nova & Vybe AI Backend Running 🚀');
 });
 
 const currentDate = new Date().toLocaleDateString('en-US', {
@@ -19,6 +19,9 @@ const currentDate = new Date().toLocaleDateString('en-US', {
   day: 'numeric',
 });
 
+// ========================================================
+// 💜 1. مسار Vybe القديم (مثل ما هو بدون أي تغيير)
+// ========================================================
 app.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
@@ -29,19 +32,15 @@ app.post('/chat', async (req, res) => {
 
     const latestMessage = messages[messages.length - 1]?.text || '';
 
-    // ========================================================
-    // 🔍 1. نظام كشف شاشة الـ Mood والبحث الحي لها (2026)
-    // ========================================================
     let searchContent = '';
     const isMoodRequest = latestMessage.includes('المزاج الحالي للمستخدم:');
 
     if (isMoodRequest) {
       try {
-        // حماية الـ RegExp من الـ null لتجنب توقف السيرفر المفاجئ
         const moodTitle = latestMessage.match(/المزاج الحالي للمستخدم:\s*(.*?)(?:\.|$)/)?.[1] || 'Normal';
-        console.log(`🎯 Mood Screen Detected. Fetching real-time 2026 recommendations for: ${moodTitle}`);
+        console.log(`🎯 Mood Screen Detected. Fetching real-time recommendations for: ${moodTitle}`);
 
-        const moodSearchQuery = `trending popular popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
+        const moodSearchQuery = `trending popular songs on spotify anghami, top hit movies 2025 2026, and aesthetic lifestyle drinks activities for ${moodTitle} mood`;
 
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
@@ -62,12 +61,7 @@ app.post('/chat', async (req, res) => {
       } catch (moodSearchError) {
         console.log('Error fetching real-time data for mood screen:', moodSearchError);
       }
-    }
-  
-    else {
-      // ========================================================
-      // 🤖 2. نظام البحث الذكي للأسئلة العامة (AI Router)
-      // ========================================================
+    } else {
       try {
         const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -119,17 +113,12 @@ If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
       }
     }
 
-    // ========================================================
-    // 💬 3. تحسين مصفوفة الرسائل (Sliding Window)
-    // ========================================================
     const recentMessages = messages.slice(-6);
-
     const formattedMessages = recentMessages.map(msg => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
       content: msg.text,
     }));
 
-    // طلب الإجابة الأساسية من الموديل الكبير Nova ببرومبت البارحة الأصلي بدون أي تعديل
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -137,7 +126,7 @@ If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-120b', // تعديل اسم الموديل ليكون مستقراً على Groq ويقرأ البرومبت الأصلي بدقة
+        model: 'openai/gpt-oss-120b',
         temperature: 0.7,
         max_tokens: 1000,
         messages: [
@@ -186,15 +175,10 @@ ${searchContent}
 
     const reply = data.choices?.[0]?.message?.content || 'Something went wrong.';
 
-    // ========================================================
-    // 🧠 4. نظام الذاكرة المستمرة المحمي (Sanitized Memory AI)
-    // ========================================================
     let updatedMemory = '';
-
     try {
       const memoryMatch = latestMessage.match(/Memory:\s*([\s\S]*?)\nRecent conversation:/i);
       const currentMemory = memoryMatch?.[1] || '';
-
       const userMatch = latestMessage.match(/New message:\s*([\s\S]*)/i);
       const userMessage = userMatch?.[1] || latestMessage;
 
@@ -247,7 +231,132 @@ CRITICAL SAFETY & QUALITY RULES:
   }
 });
 
+// ========================================================
+// 🌟 2. مسار Nova الخاص والصافي (جديد تماماً)
+// ========================================================
+app.post('/nova-chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ reply: 'رسالة غير صالحة', type: 'text', imageUrl: null });
+    }
+
+    const latestMessageObj = messages[messages.length - 1];
+    const latestMessageText = latestMessageObj?.text || '';
+
+    let searchContent = '';
+
+    // 🤖 AI Search Router لـ Nova
+    try {
+      const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          temperature: 0.0,
+          max_tokens: 50,
+          messages: [
+            {
+              role: 'system',
+              content: `You are Nova's AI Search Router. Determine if the user prompt requires real-time web search (news, 2026 updates, recent events/movies/tech). If YES, output an optimized search query in English. If NO, reply ONLY with: NO_SEARCH`,
+            },
+            { role: 'user', content: latestMessageText },
+          ],
+        }),
+      });
+
+      const searchDecisionData = await searchDecisionResponse.json();
+      const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
+
+      if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
+        console.log(`🌐 [Nova] Triggered web search: "${aiSearchQuery}"`);
+        const searchResponse = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: process.env.TAVILY_API_KEY,
+            query: aiSearchQuery,
+            search_depth: 'advanced',
+            max_results: 4,
+          }),
+        });
+
+        const searchResult = await searchResponse.json();
+        searchContent = searchResult.results
+          ?.map(item => `Source: ${item.url}\nTitle: ${item.title}\nContent: ${item.content.substring(0, 500)}`)
+          .join('\n\n') || '';
+      }
+    } catch (searchError) {
+      console.log('Nova Search Error:', searchError);
+    }
+
+    // تجهيز الرسائل للـ Context
+    const recentMessages = messages.slice(-6).map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.text || '',
+    }));
+
+    // طلب الرد من Nova (هوية مستقلة صافية)
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        temperature: 0.7,
+        max_tokens: 1000,
+        messages: [
+          {
+            role: 'system',
+            content: `
+You are Nova, an intelligent, modern, and human-like AI companion.
+
+Today's date: ${currentDate}
+
+Behavior & Personality:
+- Reply naturally in the same language as the user (Use friendly Iraqi Arabic or clean Standard Arabic).
+- Be conversational, smart, direct, and concise.
+- Never mention outdated knowledge cutoffs.
+- Keep the response as clean plain text. Do NOT use markdown bolding like stars (Do NOT use **text** or *text*).
+- If asked about your creators or identity: Explain proudly that you are Nova, fully built, tailored, and developed by your amazing developers team.
+
+Web Search Results:
+${searchContent}
+`,
+          },
+          ...recentMessages,
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(500).json({ reply: 'صار خلل بسيط بالاتصال.', type: 'text', imageUrl: null });
+    }
+
+    const reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الطلب.';
+
+    // 🟢 إرجاع النتيجة بالصيغة اللي ينتظرها كود React Native في تطبيق Nova
+    res.json({
+      reply: reply,
+      type: 'text',
+      imageUrl: null,
+    });
+
+  } catch (error) {
+    console.log('Nova Server Error:', error);
+    res.status(500).json({ reply: 'صار خطأ بالسيرفر', type: 'text', imageUrl: null });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Nova server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
