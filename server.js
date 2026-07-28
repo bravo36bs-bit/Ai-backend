@@ -194,7 +194,7 @@ ${searchContent}
 });
 
 // ========================================================
-// 🌟 2. مسار Nova الخالص (النسخة المحصنة من الثغرات)
+// 🌟 2. مسار Nova الخالص (النظام المكتمل والذكي للبحث والرد)
 // ========================================================
 app.post('/nova-chat', async (req, res) => {
   try {
@@ -213,7 +213,7 @@ app.post('/nova-chat', async (req, res) => {
 
     let searchContent = '';
 
-    // 🌐 1. AI Search Router المطور والمحصن ضد الأجوبة التخمينية
+    // 🌐 1. AI Search Router الشامل والمبني للاستجابة المباشرة
     try {
       const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -224,16 +224,16 @@ app.post('/nova-chat', async (req, res) => {
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           temperature: 0.0,
-          max_tokens: 60,
+          max_tokens: 80,
           messages: [
             {
               role: 'system',
-              content: `You are Nova's Strict Search Router.
-Today's Exact Date: ${currentDate} (Year 2026).
+              content: `You are Nova's Active Search Router. Today's Date: ${currentDate} (Year 2026).
 
-Analyze the user prompt and context:
-- MUST SEARCH: If user asks about ANY sports (World Cup, matches, winners), dates/years (2025, 2026), current events, news, prices, smartphones, or challenges previous facts ("متأكد", "sure", "no", "wrong"). Write a concise English Tavily search query.
-- ONLY reply EXACTLY "NO_SEARCH" if the prompt is a simple greeting (e.g. "hi", "مرحبا") or purely writing code/syntax logic.`,
+Instructions:
+- ALWAYS generate a highly accurate, concise English search query for Tavily for ANY user question asking about real-world facts, news, sports, winners, tournaments, devices, prices, movies, general knowledge, or weather.
+- Search by default!
+- ONLY reply with "NO_SEARCH" if the user input is strictly a basic conversational greeting (e.g. "hi", "hello", "مرحبا", "شلونك") or asking for local code formatting.`,
             },
             { role: 'user', content: latestMessageText },
           ],
@@ -244,7 +244,7 @@ Analyze the user prompt and context:
       const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
 
       if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
-        console.log(`🌐 [Nova Search Router] Searching web for: "${aiSearchQuery}"`);
+        console.log(`🌐 [Nova Search Router] Executing Tavily Search for: "${aiSearchQuery}"`);
 
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
@@ -272,7 +272,7 @@ Analyze the user prompt and context:
       content: String(msg.text || ''),
     }));
 
-    // 🤖 3. طلب الرد المحصن تماماً ضد الهلوسات
+    // 🤖 3. توليد الإجابة الذكية
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -281,31 +281,30 @@ Analyze the user prompt and context:
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        temperature: 0.2, // نسبة إبداع منخفضة لضمان الدقة وتجنب اختراع القصص
+        temperature: 0.3,
         max_tokens: 1000,
         messages: [
           {
             role: 'system',
             content: `
-You are Nova, an intelligent, modern, and honest AI companion.
+You are Nova, an intelligent, friendly, and honest AI companion.
 
 Current Date: ${currentDate} (Year 2026)
 
-Behavior & Tone:
-- Reply in the same language as the user (Friendly Iraqi Arabic or clean Standard Arabic).
-- Be conversational, humble, smart, direct, and concise.
+Behavior & Personality:
+- Reply naturally in the same language as the user (Friendly Iraqi Arabic or clean Standard Arabic).
+- Be conversational, smart, direct, concise, and humble.
 - Keep responses as plain clean text. NEVER use markdown bolding (DO NOT use **text** or *text*).
 
-⚠️ STRICT FACTUALITY & ANTI-HALLUCINATION RULES:
-- NEVER EVER invent match scores, fake tournament finals, or future sports winners.
-- If an event/tournament has NOT taken place yet, or if you lack explicit live search results for it, state clearly that the event hasn't happened or that you do not have official results. NEVER guess scores like (1-1 or penalties)!
-- Rely strictly on Web Search Results if provided.
+⚠️ STRICT FACTUALITY & REAL-TIME DATA:
+- Use the Web Search Results below to provide accurate, up-to-date answers for 2026.
+- NEVER invent or hallucinate fake scores, fake matches, or unverified facts. If context is missing, be clear and honest.
 
 ⚠️ Identity Rule:
-- Explain simply that you are Nova, designed and customized by your awesome development team to be a smart everyday companion. Be humble!
+- Explain simply that you are Nova, designed and customized by your awesome development team to be a smart everyday companion. Always remain humble!
 
 Web Search Results:
-${searchContent || 'No real-time web results fetched.'}
+${searchContent || 'No live web context required for this prompt.'}
 `,
           },
           ...recentMessages,
