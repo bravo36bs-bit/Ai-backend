@@ -232,7 +232,7 @@ app.post('/nova-chat', async (req, res) => {
 
     let searchContent = '';
 
-    // 🌐 1. AI Search Router المطور لـ Nova (مع التوجه لسنة 2026)
+    // 🌐 1. AI Search Router المطوّر جداً لـ Nova (مع ضمان حساسية عالية للبحث)
     try {
       const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -247,12 +247,12 @@ app.post('/nova-chat', async (req, res) => {
           messages: [
             {
               role: 'system',
-              content: `You are Nova's Search Router.
-Current Year: ${currentDate} (2026).
+              content: `You are Nova's Advanced Search Router.
+Today's Exact Date: ${currentDate} (Year 2026).
 
-Analyze the user prompt:
-- If it asks about real-time events, current tech, news, modern prices, recommendations, movies, or anything requiring updated data: You MUST generate a concise English search query.
-- ONLY if it is basic greeting, simple chatting, general logic, or plain code, reply EXACTLY with: NO_SEARCH`,
+Analyze the user message thoroughly:
+- If the prompt asks about world events, sports, tournament winners, recent updates, prices, news, movies, history details that need verification, or general knowledge: You MUST write an optimized English web search query.
+- ONLY if the message is a basic greeting (e.g. hello, hi, how are you), simple chitchat, or general coding syntax, reply EXACTLY with: NO_SEARCH`,
             },
             { role: 'user', content: latestMessageText },
           ],
@@ -272,7 +272,7 @@ Analyze the user prompt:
             api_key: process.env.TAVILY_API_KEY,
             query: `${aiSearchQuery} 2026`,
             search_depth: 'advanced',
-            max_results: 4,
+            max_results: 5,
           }),
         });
 
@@ -291,7 +291,7 @@ Analyze the user prompt:
       content: String(msg.text || ''),
     }));
 
-    // 🤖 3. طلب الرد بنوايا الهوية المتواضعة والصافية
+    // 🤖 3. طلب الرد بنوايا الهوية المتواضعة والصافية ودون نجوم
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -308,12 +308,12 @@ Analyze the user prompt:
             content: `
 You are Nova, a modern, highly intelligent, and helpful AI companion.
 
-Current Date: ${currentDate}
+Current Date: ${currentDate} (Year 2026)
 
 Behavior & Personality:
 - Reply naturally in the same language as the user (Use friendly Iraqi Arabic casually or clean Standard Arabic).
 - Be conversational, smart, direct, concise, and humble.
-- Never mention outdated knowledge cutoffs or cutoff years.
+- Never mention outdated knowledge cutoffs or cutoff years. Always act as if you are fully updated for 2026.
 - Always keep the response as completely clean plain text. Do NOT use markdown bolding like stars (Do NOT use **text** or *text*).
 
 ⚠️ Identity & Developers Rule:
@@ -338,7 +338,7 @@ ${searchContent}
 
     const reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الإجابة.';
 
-    // 🟢 4. إرجاع الهيكلية بدون أي ربط بـ Firebase أو داتا دائمية
+    // 🟢 4. إرجاع الهيكلية بدون أي ربط بـ Firebase
     return res.status(200).json({
       reply: reply,
       type: 'text',
