@@ -7,10 +7,10 @@ const fetch = require('node-fetch').default;
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 app.get('/', (req, res) => {
-  res.send('Nova & Vybe AI Backend Running 🚀');
+  res.send('Nova & Vybe AI Backend Running Smoothly 🚀');
 });
 
 const currentDate = new Date().toLocaleDateString('en-US', {
@@ -20,7 +20,7 @@ const currentDate = new Date().toLocaleDateString('en-US', {
 });
 
 // ========================================================
-// 💜 1. مسار Vybe القديم (مثل ما هو بدون أي تغيير)
+// 💜 1. مسار Vybe القديم (يعمل كما هو بدون أي تغيير)
 // ========================================================
 app.post('/chat', async (req, res) => {
   try {
@@ -49,7 +49,7 @@ app.post('/chat', async (req, res) => {
             api_key: process.env.TAVILY_API_KEY,
             query: moodSearchQuery,
             search_depth: 'advanced',
-            max_results: 5, 
+            max_results: 5,
           }),
         });
 
@@ -76,13 +76,9 @@ app.post('/chat', async (req, res) => {
             messages: [
               {
                 role: 'system',
-                content: `
-You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates).
-If it NEEDS search, generate a highly optimized, clean search query in English.
-If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
-`
+                content: `You are an AI Search Assistant. Your job is to analyze the user's message and determine if it requires real-time information from the internet (news, 2025/2026 events, current trends, recent movies/songs/games, weather, updates). If it NEEDS search, generate a highly optimized, clean search query in English. If it DOES NOT need search, reply ONLY with the word: NO_SEARCH`,
               },
-              { role: 'user', content: latestMessage }
+              { role: 'user', content: latestMessage },
             ],
           }),
         });
@@ -135,8 +131,7 @@ If it DOES NOT need search, reply ONLY with the word: NO_SEARCH
             content: `
 You are Nova, a smart, modern, and human-like AI assistant for the lifestyle app "vybe".
 
-Today's date:
-${currentDate}
+Today's date: ${currentDate}
 
 Behavior Rules:
 - Always reply in the same language as the user.
@@ -148,15 +143,10 @@ Behavior Rules:
 - Answer directly and clearly.
 - Use polished and correct Arabic. Use natural Iraqi Arabic casually when appropriate.
 - Never mention being outdated.
-- Do not hallucinate facts. Never guess song names, movie names, or invent artists. If real-time search context is empty or unhelpful, recommend famous, well-known options but NEVER invent or hallucinate data.
+- Do not hallucinate facts.
 
-⚠️ Formatting & Identity Rules (CRITICAL):
+⚠️ Formatting Rules:
 - Never use markdown bolding formatting like stars (e.g., do NOT use **text** or *text* or asterisks). Keep the response as completely clean and plain text.
-- If the user asks about your identity, who created you, or who developed you, explain clearly and proudly that you are Nova, powered by a base GPT model, but you were fully developed, customized, and tailored by your amazing developers (the current development team).
-
-Web Search Rules:
-- If web search results are provided below, prioritize them for factual, recent, or trend-related information. Use this current 2026 data to fill the structured templates (songs, movies, drinks) dynamically and accurately.
-- Use web results intelligently and synthesize the answer beautifully. Do not just copy-paste.
 
 Web Search Results:
 ${searchContent}
@@ -183,20 +173,11 @@ ${searchContent}
       const userMessage = userMatch?.[1] || latestMessage;
 
       const memoryPrompt = `
-Current memory:
-${currentMemory}
+Current memory: ${currentMemory}
+User message: ${userMessage}
+Nova reply: ${reply}
 
-User message:
-${userMessage}
-
-Nova reply:
-${reply}
-
-Task: Update the memory based on the new conversation.
-CRITICAL SAFETY & QUALITY RULES:
-- Max 15 lines. Return ONLY the updated plain text memory.
-- ONLY memorize useful and permanent facts about the user (e.g., name, hobbies, key preferences, lifestyle plans).
-- NEVER memorize temporary arguments, insults, or bad words. If the user used offensive language, completely ignore it, keep the memory completely positive and clean, and do NOT mention the user's politeness level.
+Task: Update memory. Return ONLY updated plain text memory.
 `;
 
       const memoryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -232,7 +213,7 @@ CRITICAL SAFETY & QUALITY RULES:
 });
 
 // ========================================================
-// 🌟 2. مسار Nova الخاص والصافي (جديد تماماً)
+// 🌟 2. مسار Nova الخالص والجديد (Session-Based / Local Context)
 // ========================================================
 app.post('/nova-chat', async (req, res) => {
   try {
@@ -243,11 +224,15 @@ app.post('/nova-chat', async (req, res) => {
     }
 
     const latestMessageObj = messages[messages.length - 1];
-    const latestMessageText = latestMessageObj?.text || '';
+    const latestMessageText = typeof latestMessageObj?.text === 'string' ? latestMessageObj.text.trim() : '';
+
+    if (!latestMessageText) {
+      return res.status(400).json({ reply: 'الرسالة فارغة.', type: 'text', imageUrl: null });
+    }
 
     let searchContent = '';
 
-    // 🤖 AI Search Router لـ Nova
+    // 🌐 1. AI Search Router المطور لـ Nova (مع التوجه لسنة 2026)
     try {
       const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -258,11 +243,16 @@ app.post('/nova-chat', async (req, res) => {
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
           temperature: 0.0,
-          max_tokens: 50,
+          max_tokens: 60,
           messages: [
             {
               role: 'system',
-              content: `You are Nova's AI Search Router. Determine if the user prompt requires real-time web search (news, 2026 updates, recent events/movies/tech). If YES, output an optimized search query in English. If NO, reply ONLY with: NO_SEARCH`,
+              content: `You are Nova's Search Router.
+Current Year: ${currentDate} (2026).
+
+Analyze the user prompt:
+- If it asks about real-time events, current tech, news, modern prices, recommendations, movies, or anything requiring updated data: You MUST generate a concise English search query.
+- ONLY if it is basic greeting, simple chatting, general logic, or plain code, reply EXACTLY with: NO_SEARCH`,
             },
             { role: 'user', content: latestMessageText },
           ],
@@ -273,13 +263,14 @@ app.post('/nova-chat', async (req, res) => {
       const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
 
       if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
-        console.log(`🌐 [Nova] Triggered web search: "${aiSearchQuery}"`);
+        console.log(`🌐 [Nova Search Router] Searching web for: "${aiSearchQuery}"`);
+
         const searchResponse = await fetch('https://api.tavily.com/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             api_key: process.env.TAVILY_API_KEY,
-            query: aiSearchQuery,
+            query: `${aiSearchQuery} 2026`,
             search_depth: 'advanced',
             max_results: 4,
           }),
@@ -291,16 +282,16 @@ app.post('/nova-chat', async (req, res) => {
           .join('\n\n') || '';
       }
     } catch (searchError) {
-      console.log('Nova Search Error:', searchError);
+      console.log('⚠️ Nova Search Router Error:', searchError.message);
     }
 
-    // تجهيز الرسائل للـ Context
+    // 💬 2. السياق المحلي (آخر 6 رسائل من الفرونت إند فقط)
     const recentMessages = messages.slice(-6).map(msg => ({
       role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.text || '',
+      content: String(msg.text || ''),
     }));
 
-    // طلب الرد من Nova (هوية مستقلة صافية)
+    // 🤖 3. طلب الرد بنوايا الهوية المتواضعة والصافية
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -315,18 +306,21 @@ app.post('/nova-chat', async (req, res) => {
           {
             role: 'system',
             content: `
-You are Nova, an intelligent, modern, and human-like AI companion.
+You are Nova, a modern, highly intelligent, and helpful AI companion.
 
-Today's date: ${currentDate}
+Current Date: ${currentDate}
 
 Behavior & Personality:
-- Reply naturally in the same language as the user (Use friendly Iraqi Arabic or clean Standard Arabic).
-- Be conversational, smart, direct, and concise.
-- Never mention outdated knowledge cutoffs.
-- Keep the response as clean plain text. Do NOT use markdown bolding like stars (Do NOT use **text** or *text*).
-- If asked about your creators or identity: Explain proudly that you are Nova, fully built, tailored, and developed by your amazing developers team.
+- Reply naturally in the same language as the user (Use friendly Iraqi Arabic casually or clean Standard Arabic).
+- Be conversational, smart, direct, concise, and humble.
+- Never mention outdated knowledge cutoffs or cutoff years.
+- Always keep the response as completely clean plain text. Do NOT use markdown bolding like stars (Do NOT use **text** or *text*).
 
-Web Search Results:
+⚠️ Identity & Developers Rule:
+- If asked about yourself or who created/developed you: Explain simply and clearly that you are Nova, an AI assistant powered by advanced base models, designed and customized by your awesome development team to be a smart everyday companion.
+- BE HUMBLE: Never exaggerate or act like your developers created miracles or atomic science. Keep it natural, grounded, friendly, and cool.
+
+Web Search Results (Prioritize if relevant):
 ${searchContent}
 `,
           },
@@ -338,25 +332,26 @@ ${searchContent}
     const data = await response.json();
 
     if (data.error) {
-      return res.status(500).json({ reply: 'صار خلل بسيط بالاتصال.', type: 'text', imageUrl: null });
+      console.error('Groq Generation Error:', data.error);
+      return res.status(500).json({ reply: 'عذراً، صار خلل بسيط بإنشاء الرد.', type: 'text', imageUrl: null });
     }
 
-    const reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الطلب.';
+    const reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة الإجابة.';
 
-    // 🟢 إرجاع النتيجة بالصيغة اللي ينتظرها كود React Native في تطبيق Nova
-    res.json({
+    // 🟢 4. إرجاع الهيكلية بدون أي ربط بـ Firebase أو داتا دائمية
+    return res.status(200).json({
       reply: reply,
       type: 'text',
       imageUrl: null,
     });
 
   } catch (error) {
-    console.log('Nova Server Error:', error);
-    res.status(500).json({ reply: 'صار خطأ بالسيرفر', type: 'text', imageUrl: null });
+    console.error('Global Server Error on /nova-chat:', error);
+    return res.status(500).json({ reply: 'صار خطأ بالسيرفر.', type: 'text', imageUrl: null });
   }
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Unified Server running on port ${PORT}`);
 });
