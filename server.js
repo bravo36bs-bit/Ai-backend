@@ -343,14 +343,14 @@ app.post('/everlast-chat', async (req, res) => {
     const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ reply: 'رسالة غير صالحة', type: 'text', imageUrl: null });
+      return res.status(400).json({ reply: 'Invalid message', type: 'text', imageUrl: null });
     }
 
     const latestMessageObj = messages[messages.length - 1];
     const latestMessageText = typeof latestMessageObj?.text === 'string' ? latestMessageObj.text.trim() : '';
 
     if (!latestMessageText) {
-      return res.status(400).json({ reply: 'الرسالة فارغة.', type: 'text', imageUrl: null });
+      return res.status(400).json({ reply: 'Please enter a message.', type: 'text', imageUrl: null });
     }
 
     let searchContent = '';
@@ -426,57 +426,23 @@ ONLY reply "NO_SEARCH" for greetings like "مرحبا", "شلونك", or simple 
           {
             role: 'system',
             content: `
-You are EVERLAST AI Assistant, a friendly and professional guide for premium windows, doors, and shower screens.
+You are EVERLAST AI Assistant for Australia. Premium windows, doors, and shower screens expert.
 
-Company: EVERLAST Windows & Doors
-Website: www.everlast.com
+Company: EVERLAST Windows & Doors (Sydney, Australia)
 
-PRODUCTS & EXPERTISE:
-
-🚪 DOORS (8 Types):
-- Sliding Doors: Space-saving, smooth operation, perfect for modern homes
-- Bifold Doors: Accordion-style folding systems, great for opening up spaces
-- Security Doors: Reinforced protection, ideal for safety-conscious clients
-- French Doors: Classic glass doors with elegance and charm
-- Stacker Doors: Multi-panel stacking, maximum light and views
-- Double Doors: Double-leaf entry systems, grand entrances
-- Repair Doors: Professional repair and maintenance services
-- Hinged Doors: Traditional swing-out, reliable and timeless
-
-🪟 WINDOWS (9 Types):
-- Fixed Glass: Stationary panels, clear unobstructed views
-- Slide Windows: Smooth sliding systems, easy operation
-- Stacker Windows: Multi-panel systems, flexible light control
-- Bifold Windows: Accordion-style panes, modern and sleek
-- Awning Windows: Top-hinged design, good ventilation
-- Louvers Windows: Horizontal slat systems, privacy and air flow
-- Domestic Windows: Residential solutions for any home style
-- Security Windows: Reinforced safety glass and frames
-- Repair Windows: Professional maintenance and repair services
-
-🚿 SHOWER SCREENS (5 Types):
-- Shower Screen: Standard enclosures, reliable and affordable
-- Full Frame: Fully framed systems, durable and professional
-- Full Frame Corner: Corner-mounted design, space-efficient
-- Semi Frameless: Hybrid frame systems, modern minimalist look
-- Frameless: Minimalist frameless design, sleek and contemporary
+PRODUCTS:
+🚪 DOORS: Sliding, Bifold, Security, French, Stacker, Double, Repair, Hinged
+🪟 WINDOWS: Fixed Glass, Slide, Stacker, Bifold, Awning, Louvers, Domestic, Security, Repair
+🚿 SHOWER SCREENS: Standard, Full Frame, Corner, Semi Frameless, Frameless
 
 BEHAVIOR:
-- Respond in Iraqi Arabic or Standard Arabic
-- Be professional, helpful, warm, and approachable
-- Provide specific product details when asked
-- Suggest suitable products based on customer needs and budget
-- For pricing, orders, or site visits: Direct to Contact page or phone
-- Keep responses conversational, concise, and easy to understand
-- DO NOT use markdown bolding (NO **text** or *text**)
-- Ask clarifying questions if needed to recommend best solution
-
-WHEN TO SUGGEST CONTACT:
-- Pricing inquiries
-- Installation bookings
-- Custom orders
-- Large projects
-- Site inspections
+- Respond in ENGLISH ONLY
+- Be friendly, concise, professional
+- Keep answers SHORT (1-2 sentences max)
+- Suggest products based on needs
+- Direct to CONTACT for quotes/bookings
+- NO markdown bolding (**text** or *text*)
+- No long explanations - be direct
 
 Web Search Results (if available):
 ${searchContent || 'Use your product knowledge to answer'}
@@ -491,7 +457,7 @@ ${searchContent || 'Use your product knowledge to answer'}
 
     if (data.error) {
       console.error('EVERLAST Groq Error:', data.error);
-      return res.status(500).json({ reply: 'عذراً، صار خلل صغير. حاول ثانية.', type: 'text', imageUrl: null });
+      return res.status(500).json({ reply: 'Something went wrong. Please try again.', type: 'text', imageUrl: null });
     }
 
     let reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة سؤالك.';
@@ -507,15 +473,15 @@ ${searchContent || 'Use your product knowledge to answer'}
 
   } catch (error) {
     console.error('EVERLAST Server Error:', error);
-    return res.status(500).json({ reply: 'صار خطأ بالسيرفر.', type: 'text', imageUrl: null });
+    return res.status(500).json({ reply: 'Server error. Try again later.', type: 'text', imageUrl: null });
   }
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Unified Server running on port ${PORT}`);
-  console.log(`✅ Routes available:`);
+  console.log(`🚀 Nova AI Backend running on port ${PORT}`);
+  console.log(`✅ Available endpoints:`);
   console.log(`  - POST /chat (Vybe)`);
   console.log(`  - POST /nova-chat (Nova)`);
-  console.log(`  - POST /everlast-chat (EVERLAST Windows & Doors)`);
+  console.log(`  - POST /everlast-chat (EVERLAST - English, Australia)`);
 });
