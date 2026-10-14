@@ -335,7 +335,187 @@ ${searchContent || 'No real-time search context required.'}
   }
 });
 
+// ========================================================
+// 🪟 3. مسار EVERLAST (متخصص للأبواب والنوافذ والشاور سكرينز)
+// ========================================================
+app.post('/everlast-chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ reply: 'رسالة غير صالحة', type: 'text', imageUrl: null });
+    }
+
+    const latestMessageObj = messages[messages.length - 1];
+    const latestMessageText = typeof latestMessageObj?.text === 'string' ? latestMessageObj.text.trim() : '';
+
+    if (!latestMessageText) {
+      return res.status(400).json({ reply: 'الرسالة فارغة.', type: 'text', imageUrl: null });
+    }
+
+    let searchContent = '';
+
+    // 🌐 Search Router للمعلومات الحقيقية عند الحاجة
+    try {
+      const searchDecisionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-120b',
+          temperature: 0.0,
+          max_tokens: 80,
+          messages: [
+            {
+              role: 'system',
+              content: `You are EVERLAST's Search Router.
+Task: Generate English search query if user asks about installation costs, delivery times, competitors, or standards.
+ONLY reply "NO_SEARCH" for greetings like "مرحبا", "شلونك", or simple product questions we can answer directly.`,
+            },
+            { role: 'user', content: latestMessageText },
+          ],
+        }),
+      });
+
+      const searchDecisionData = await searchDecisionResponse.json();
+      const aiSearchQuery = searchDecisionData.choices?.[0]?.message?.content?.trim() || 'NO_SEARCH';
+
+      if (aiSearchQuery !== 'NO_SEARCH' && !aiSearchQuery.includes('NO_SEARCH')) {
+        console.log(`🌐 [EVERLAST Search Router] Query: "${aiSearchQuery}"`);
+
+        const searchResponse = await fetch('https://api.tavily.com/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: process.env.TAVILY_API_KEY,
+            query: aiSearchQuery,
+            search_depth: 'advanced',
+            max_results: 5,
+          }),
+        });
+
+        const searchResult = await searchResponse.json();
+        searchContent = searchResult.results
+          ?.map(item => `Title: ${item.title}\nContent: ${item.content.substring(0, 600)}`)
+          .join('\n\n') || '';
+      }
+    } catch (searchError) {
+      console.log('⚠️ EVERLAST Search Router Error:', searchError.message);
+    }
+
+    // 💬 آخر 6 رسائل للسياق
+    const recentMessages = messages.slice(-6).map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: String(msg.text || ''),
+    }));
+
+    // 🤖 طلب الرد المتخصص لـ EVERLAST
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        temperature: 0.1,
+        max_tokens: 1000,
+        messages: [
+          {
+            role: 'system',
+            content: `
+You are EVERLAST AI Assistant, a friendly and professional guide for premium windows, doors, and shower screens.
+
+Company: EVERLAST Windows & Doors
+Website: www.everlast.com
+
+PRODUCTS & EXPERTISE:
+
+🚪 DOORS (8 Types):
+- Sliding Doors: Space-saving, smooth operation, perfect for modern homes
+- Bifold Doors: Accordion-style folding systems, great for opening up spaces
+- Security Doors: Reinforced protection, ideal for safety-conscious clients
+- French Doors: Classic glass doors with elegance and charm
+- Stacker Doors: Multi-panel stacking, maximum light and views
+- Double Doors: Double-leaf entry systems, grand entrances
+- Repair Doors: Professional repair and maintenance services
+- Hinged Doors: Traditional swing-out, reliable and timeless
+
+🪟 WINDOWS (9 Types):
+- Fixed Glass: Stationary panels, clear unobstructed views
+- Slide Windows: Smooth sliding systems, easy operation
+- Stacker Windows: Multi-panel systems, flexible light control
+- Bifold Windows: Accordion-style panes, modern and sleek
+- Awning Windows: Top-hinged design, good ventilation
+- Louvers Windows: Horizontal slat systems, privacy and air flow
+- Domestic Windows: Residential solutions for any home style
+- Security Windows: Reinforced safety glass and frames
+- Repair Windows: Professional maintenance and repair services
+
+🚿 SHOWER SCREENS (5 Types):
+- Shower Screen: Standard enclosures, reliable and affordable
+- Full Frame: Fully framed systems, durable and professional
+- Full Frame Corner: Corner-mounted design, space-efficient
+- Semi Frameless: Hybrid frame systems, modern minimalist look
+- Frameless: Minimalist frameless design, sleek and contemporary
+
+BEHAVIOR:
+- Respond in Iraqi Arabic or Standard Arabic
+- Be professional, helpful, warm, and approachable
+- Provide specific product details when asked
+- Suggest suitable products based on customer needs and budget
+- For pricing, orders, or site visits: Direct to Contact page or phone
+- Keep responses conversational, concise, and easy to understand
+- DO NOT use markdown bolding (NO **text** or *text**)
+- Ask clarifying questions if needed to recommend best solution
+
+WHEN TO SUGGEST CONTACT:
+- Pricing inquiries
+- Installation bookings
+- Custom orders
+- Large projects
+- Site inspections
+
+Web Search Results (if available):
+${searchContent || 'Use your product knowledge to answer'}
+`,
+          },
+          ...recentMessages,
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('EVERLAST Groq Error:', data.error);
+      return res.status(500).json({ reply: 'عذراً، صار خلل صغير. حاول ثانية.', type: 'text', imageUrl: null });
+    }
+
+    let reply = data.choices?.[0]?.message?.content || 'لم أستطع معالجة سؤالك.';
+
+    // تنظيف من النجوم
+    reply = reply.replace(/\*\*/g, '').replace(/\*/g, '');
+
+    return res.status(200).json({
+      reply: reply,
+      type: 'text',
+      imageUrl: null,
+    });
+
+  } catch (error) {
+    console.error('EVERLAST Server Error:', error);
+    return res.status(500).json({ reply: 'صار خطأ بالسيرفر.', type: 'text', imageUrl: null });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Unified Server running on port ${PORT}`);
+  console.log(`✅ Routes available:`);
+  console.log(`  - POST /chat (Vybe)`);
+  console.log(`  - POST /nova-chat (Nova)`);
+  console.log(`  - POST /everlast-chat (EVERLAST Windows & Doors)`);
 });
